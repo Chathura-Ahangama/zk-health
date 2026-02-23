@@ -299,3 +299,50 @@ export function clearAllClaims(): void {
   }
   keysToRemove.forEach((k) => localStorage.removeItem(k));
 }
+
+/* ── Bundle Storage ───────────────────────────────────────── */
+/* Store full claim bundles so QR code scanning can retrieve them */
+
+const BUNDLE_PREFIX = "medzk_bundle_";
+
+/**
+ * Save a claim bundle to localStorage.
+ * Called when patient creates a claim.
+ */
+export function storeClaimBundle(claimId: string, bundle: unknown): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(`${BUNDLE_PREFIX}${claimId}`, JSON.stringify(bundle));
+  } catch {
+    console.warn("[ClaimSync] Failed to store bundle");
+  }
+}
+
+/**
+ * Retrieve a claim bundle from localStorage by claimId.
+ * Used when insurer scans QR code.
+ */
+export function retrieveClaimBundle(claimId: string): unknown | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(`${BUNDLE_PREFIX}${claimId}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Get all stored bundle IDs.
+ */
+export function getStoredBundleIds(): string[] {
+  if (typeof window === "undefined") return [];
+  const ids: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key?.startsWith(BUNDLE_PREFIX)) {
+      ids.push(key.replace(BUNDLE_PREFIX, ""));
+    }
+  }
+  return ids;
+}

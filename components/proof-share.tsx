@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Download,
@@ -18,12 +18,13 @@ import {
 } from "lucide-react";
 import { GlassCard } from "./glass-card";
 import { QRProof } from "./qr-proof";
-import { cn, downloadJSON, formatDate, truncateHash } from "@/lib/utils";
+import { cn, downloadJSON, formatDate } from "@/lib/utils";
 import {
   serializeBundle,
   getExpiryDays,
   type ClaimBundle,
 } from "@/lib/claim-engine";
+import { storeClaimBundle } from "@/lib/claim-sync";
 import Link from "next/link";
 
 interface ProofShareProps {
@@ -36,9 +37,20 @@ export function ProofShare({ bundle, onShared }: ProofShareProps) {
   const [showQR, setShowQR] = useState(false);
   const [showBundle, setShowBundle] = useState(false);
   const [shared, setShared] = useState(false);
+  const [verifyUrl, setVerifyUrl] = useState("");
 
   const serialized = serializeBundle(bundle);
   const expiryDays = getExpiryDays(bundle);
+
+  // Store bundle in localStorage and generate the verify URL
+  useEffect(() => {
+    storeClaimBundle(bundle.claimId, bundle);
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setVerifyUrl(
+      `${origin}/verify?claimId=${encodeURIComponent(bundle.claimId)}`,
+    );
+  }, [bundle]);
 
   const copyBundle = async () => {
     await navigator.clipboard.writeText(serialized);
@@ -55,9 +67,13 @@ export function ProofShare({ bundle, onShared }: ProofShareProps) {
       `MedZK Insurance Claim — ${bundle.claimId}`,
     );
     const body = encodeURIComponent(
-      `Dear ${bundle.policy.insurerName},\n\nPlease find my zero-knowledge proof claim.\n\nClaim ID: ${bundle.claimId}\nPolicy: ${bundle.policy.number}\nType: ${bundle.policy.claimTypeLabel}\n\nVerify at: ${typeof window !== "undefined" ? window.location.origin : ""}/verify\n\n---\n\n${serialized}`,
+      `Dear ${bundle.policy.insurerName},\n\nPlease find my zero-knowledge proof claim.\n\nClaim ID: ${bundle.claimId}\nPolicy: ${bundle.policy.number}\nType: ${bundle.policy.claimTypeLabel}\n\nScan the QR code or open this link to verify:\n${verifyUrl}\n\nOr use the JSON bundle below:\n\n${serialized}`,
     );
     window.open(`mailto:?subject=${subject}&body=${body}`);
+  };
+
+  const copyVerifyLink = async () => {
+    await navigator.clipboard.writeText(verifyUrl);
   };
 
   const markAsShared = () => {
@@ -100,7 +116,11 @@ export function ProofShare({ bundle, onShared }: ProofShareProps) {
           {[
             { label: "Claim ID", value: bundle.claimId, mono: true },
             { label: "Policy", value: bundle.policy.number, mono: true },
-            { label: "Type", value: bundle.policy.claimTypeLabel, mono: false },
+            {
+              label: "Type",
+              value: bundle.policy.claimTypeLabel,
+              mono: false,
+            },
             {
               label: "Lab",
               value: bundle.publicParams.labIdentifier,
@@ -157,7 +177,7 @@ export function ProofShare({ bundle, onShared }: ProofShareProps) {
           },
           {
             label: "QR Code",
-            sub: "Scan to verify",
+            sub: "Insurer scans this",
             icon: QrCode,
             color: "text-indigo-600",
             bg: "bg-indigo-50",
@@ -176,7 +196,7 @@ export function ProofShare({ bundle, onShared }: ProofShareProps) {
           const Icon = item.icon;
           return (
             <motion.div
-              key={item.label}
+              key={idx}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 + idx * 0.05 }}
@@ -217,7 +237,7 @@ export function ProofShare({ bundle, onShared }: ProofShareProps) {
         })}
       </div>
 
-      {/* QR Code expanded */}
+      {/* QR Code expanded — now contains a real verify URL */}
       <AnimatePresence>
         {showQR && (
           <motion.div
@@ -228,25 +248,43 @@ export function ProofShare({ bundle, onShared }: ProofShareProps) {
           >
             <GlassCard
               padding="md"
-              className="sm:p-8 flex flex-col items-center gap-3 sm:gap-4"
+              className="sm:p-8 flex flex-col items-center gap-4"
             >
-              <QRProof
-                data={JSON.stringify({
-                  claimId: bundle.claimId,
-                  proofHash: bundle.proof.hash,
-                  verifyAt:
-                    typeof window !== "undefined"
-                      ? `${window.location.origin}/verify`
-                      : "/verify",
-                })}
-                size={180}
-              />
-              <div className="text-center">
-                <p className="text-xs font-medium text-slate-600">
-                  Scan with insurer&apos;s app
+              {/* The QR now encodes the actual verify URL */}
+              <QRProof data={verifyUrl} size={200} />
+
+              <div className="text-center space-y-2">
+                <p className="text-xs font-semibold text-slate-700">
+                  Insurer scans this → claim auto-loads
                 </p>
-                <p className="text-[10px] text-slate-400 mt-0.5 font-mono">
+                <p className="text-[10px] text-slate-400 font-mono">
                   {bundle.claimId}
+                </p>
+
+                {/* Copyable link */}
+                <button
+                  onClick={copyVerifyLink}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200/50 text-[10px] sm:text-[11px] font-mono text-indigo-600 hover:bg-indigo-100 transition-colors"
+                >
+                  <Copy className="w-3 h-3" />
+                  <span className="truncate max-w-[200px] sm:max-w-[300px]">
+                    {verifyUrl}
+                  </span>
+                </button>
+              </div>
+
+              <div className="w-full pt-2 border-t border-slate-200/40">
+                <p className="text-[10px] text-slate-400 text-center">
+                  💡 For demo: open{" "}
+                  <a
+                    href={verifyUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-indigo-500 underline"
+                  >
+                    this link
+                  </a>{" "}
+                  in a new tab — the claim loads automatically
                 </p>
               </div>
             </GlassCard>
@@ -284,7 +322,7 @@ export function ProofShare({ bundle, onShared }: ProofShareProps) {
         </AnimatePresence>
       </div>
 
-      {/* Verification link */}
+      {/* Verification info */}
       <GlassCard
         padding="sm"
         className="bg-emerald-50/30 border-emerald-200/30"
@@ -293,7 +331,8 @@ export function ProofShare({ bundle, onShared }: ProofShareProps) {
           <Shield className="w-4 h-4 text-emerald-600 flex-shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-[10px] sm:text-xs text-emerald-700 font-medium">
-              Insurer verifies at:
+              Insurer can verify by scanning QR, opening the link, or uploading
+              the JSON at:
             </p>
             <Link href="/verify" target="_blank">
               <code className="text-[10px] sm:text-[11px] font-mono text-emerald-600 bg-emerald-100/60 px-1.5 py-0.5 rounded inline-flex items-center gap-1 mt-0.5">

@@ -2,18 +2,29 @@
 
 import { useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, FileJson, AlertCircle, ClipboardPaste } from "lucide-react";
+import {
+  Upload,
+  FileJson,
+  AlertCircle,
+  ClipboardPaste,
+  ScanLine,
+} from "lucide-react";
 import { GlassCard } from "./glass-card";
+import { QRScanner } from "./qr-scanner";
 import { cn } from "@/lib/utils";
+import { retrieveClaimBundle } from "@/lib/claim-sync";
+import { serializeBundle, type ClaimBundle } from "@/lib/claim-engine";
 
 interface VerifierUploadProps {
   onLoad: (input: string | File) => void;
   error?: string | null;
 }
 
+type InputMode = "upload" | "paste" | "scan";
+
 export function VerifierUpload({ onLoad, error }: VerifierUploadProps) {
   const [isDragOver, setIsDragOver] = useState(false);
-  const [pasteMode, setPasteMode] = useState(false);
+  const [mode, setMode] = useState<InputMode>("upload");
   const [pasteValue, setPasteValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -50,6 +61,44 @@ export function VerifierUpload({ onLoad, error }: VerifierUploadProps) {
     }
   };
 
+  const handleQRScan = useCallback(
+    (data: string) => {
+      // The QR contains a URL like /verify?claimId=CLM-XXX
+      // Extract the claimId from the URL
+      try {
+        const url = new URL(data);
+        const claimId = url.searchParams.get("claimId");
+
+        if (claimId) {
+          // Try to load from localStorage
+          const bundle = retrieveClaimBundle(claimId);
+          if (bundle) {
+            // Found the bundle — pass it as JSON string
+            onLoad(JSON.stringify(bundle));
+            return;
+          }
+        }
+
+        // If URL parsing fails or no bundle found, try treating data as raw JSON
+        onLoad(data);
+      } catch {
+        // Not a URL — maybe it's raw JSON
+        onLoad(data);
+      }
+    },
+    [onLoad],
+  );
+
+  const tabs: {
+    key: InputMode;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+  }[] = [
+    { key: "upload", label: "Upload", icon: Upload },
+    { key: "scan", label: "Scan QR", icon: ScanLine },
+    { key: "paste", label: "Paste", icon: ClipboardPaste },
+  ];
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -59,42 +108,38 @@ export function VerifierUpload({ onLoad, error }: VerifierUploadProps) {
       className="w-full max-w-2xl mx-auto space-y-4"
     >
       {/* Mode tabs */}
-      <div className="flex items-center justify-center gap-2">
-        <button
-          onClick={() => setPasteMode(false)}
-          className={cn(
-            "px-4 py-2 rounded-lg text-xs font-semibold transition-all",
-            !pasteMode
-              ? "bg-indigo-100 text-indigo-700 border border-indigo-200"
-              : "bg-white/60 text-slate-500 border border-slate-200/60 hover:bg-slate-50",
-          )}
-        >
-          <Upload className="w-3.5 h-3.5 inline mr-1.5" />
-          Upload File
-        </button>
-        <button
-          onClick={() => setPasteMode(true)}
-          className={cn(
-            "px-4 py-2 rounded-lg text-xs font-semibold transition-all",
-            pasteMode
-              ? "bg-indigo-100 text-indigo-700 border border-indigo-200"
-              : "bg-white/60 text-slate-500 border border-slate-200/60 hover:bg-slate-50",
-          )}
-        >
-          <ClipboardPaste className="w-3.5 h-3.5 inline mr-1.5" />
-          Paste JSON
-        </button>
+      <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setMode(tab.key)}
+              className={cn(
+                "flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg text-[10px] sm:text-xs font-semibold transition-all",
+                mode === tab.key
+                  ? "bg-indigo-100 text-indigo-700 border border-indigo-200 shadow-sm"
+                  : "bg-white/60 text-slate-500 border border-slate-200/60 hover:bg-slate-50",
+              )}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
 
       <AnimatePresence mode="wait">
-        {!pasteMode ? (
+        {/* Upload File */}
+        {mode === "upload" && (
           <motion.div
             key="upload"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
           >
-            <GlassCard glow="indigo" padding="lg">
+            <GlassCard glow="indigo" padding="md" className="sm:p-8">
               <div
                 onDragOver={(e) => {
                   e.preventDefault();
@@ -105,7 +150,7 @@ export function VerifierUpload({ onLoad, error }: VerifierUploadProps) {
                 onClick={() => inputRef.current?.click()}
                 className={cn(
                   "relative cursor-pointer rounded-xl border-2 border-dashed transition-all duration-300",
-                  "flex flex-col items-center justify-center gap-4 py-14 px-8",
+                  "flex flex-col items-center justify-center gap-3 sm:gap-4 py-10 sm:py-14 px-4 sm:px-8",
                   isDragOver
                     ? "border-indigo-400 bg-indigo-50/60"
                     : "border-slate-200/80 hover:border-indigo-300",
@@ -121,13 +166,13 @@ export function VerifierUpload({ onLoad, error }: VerifierUploadProps) {
 
                 <div
                   className={cn(
-                    "flex items-center justify-center w-14 h-14 rounded-2xl transition-colors",
+                    "flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl transition-colors",
                     isDragOver
                       ? "bg-indigo-100 text-indigo-600"
                       : "bg-slate-100 text-slate-400",
                   )}
                 >
-                  <FileJson className="w-6 h-6" />
+                  <FileJson className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
 
                 <div className="text-center">
@@ -135,7 +180,7 @@ export function VerifierUpload({ onLoad, error }: VerifierUploadProps) {
                     Drop MedZK claim bundle
                   </p>
                   <p className="mt-1 text-xs text-slate-400">
-                    JSON file received from the patient
+                    JSON file from the patient
                   </p>
                 </div>
 
@@ -145,23 +190,42 @@ export function VerifierUpload({ onLoad, error }: VerifierUploadProps) {
               </div>
             </GlassCard>
           </motion.div>
-        ) : (
+        )}
+
+        {/* Scan QR */}
+        {mode === "scan" && (
+          <motion.div
+            key="scan"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
+          >
+            <GlassCard glow="indigo" padding="md" className="sm:p-8">
+              <QRScanner onScan={handleQRScan} />
+            </GlassCard>
+          </motion.div>
+        )}
+
+        {/* Paste JSON */}
+        {mode === "paste" && (
           <motion.div
             key="paste"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
           >
-            <GlassCard glow="indigo" padding="lg">
-              <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2 block">
+            <GlassCard glow="indigo" padding="md" className="sm:p-8">
+              <label className="text-[10px] sm:text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2 block">
                 Paste Claim Bundle JSON
               </label>
               <textarea
                 value={pasteValue}
                 onChange={(e) => setPasteValue(e.target.value)}
                 placeholder='{"version":"1.0.0","claimId":"CLM-...","proof":{...}}'
-                rows={8}
-                className="w-full px-4 py-3 rounded-xl text-xs font-mono bg-slate-900 text-indigo-300 border border-slate-700/50 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-400/40 resize-none"
+                rows={6}
+                className="w-full px-3 sm:px-4 py-3 rounded-xl text-xs font-mono bg-slate-900 text-indigo-300 border border-slate-700/50 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-400/40 resize-none"
               />
               <motion.button
                 onClick={handlePaste}
@@ -177,13 +241,14 @@ export function VerifierUpload({ onLoad, error }: VerifierUploadProps) {
         )}
       </AnimatePresence>
 
+      {/* Error */}
       <AnimatePresence>
         {error && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="flex items-center gap-2 px-4 py-3 rounded-lg bg-red-50 border border-red-200/60 text-red-700 text-sm"
+            className="flex items-center gap-2 px-3 sm:px-4 py-3 rounded-lg bg-red-50 border border-red-200/60 text-red-700 text-xs sm:text-sm"
           >
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
             {error}

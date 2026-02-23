@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Shield,
@@ -10,6 +12,7 @@ import {
   FileText,
   Clock,
   Fingerprint,
+  CheckCircle2,
 } from "lucide-react";
 import { useVerifier } from "@/hooks/use-verifier";
 import { GlassCard } from "@/components/glass-card";
@@ -18,10 +21,31 @@ import { VerifierResult } from "@/components/verifier-result";
 import { ApprovalConfirmation } from "@/components/approval-confirmation";
 import { cn, formatDateTime, truncateHash } from "@/lib/utils";
 import { publishStatusUpdate } from "@/lib/claim-sync";
+import { retrieveClaimBundle } from "@/lib/claim-sync";
 import Link from "next/link";
 
-export default function VerifyPage() {
+function VerifyContent() {
+  const searchParams = useSearchParams();
   const v = useVerifier();
+  const [autoLoaded, setAutoLoaded] = useState(false);
+
+  // Auto-load claim from URL params (from QR code scan)
+  useEffect(() => {
+    if (autoLoaded || v.state !== "AWAITING") return;
+
+    const claimId = searchParams.get("claimId");
+    if (!claimId) return;
+
+    const bundle = retrieveClaimBundle(claimId);
+    if (bundle) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAutoLoaded(true);
+      // Small delay so the user sees the page first
+      setTimeout(() => {
+        v.loadBundle(JSON.stringify(bundle));
+      }, 500);
+    }
+  }, [searchParams, v, autoLoaded]);
 
   const handleVerify = () => {
     if (v.bundle) {
@@ -40,6 +64,15 @@ export default function VerifyPage() {
 
   const handleReject = (notes: string) => {
     v.rejectClaim(notes);
+  };
+
+  const handleReset = () => {
+    v.reset();
+    setAutoLoaded(false);
+    // Clear the URL params without reload
+    if (typeof window !== "undefined") {
+      window.history.replaceState({}, "", "/verify");
+    }
   };
 
   return (
@@ -85,7 +118,7 @@ export default function VerifyPage() {
               animate={{ opacity: 1, scale: 1 }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={v.reset}
+              onClick={handleReset}
               className="flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-medium text-slate-500 hover:text-slate-700 hover:bg-white/60 border border-slate-200/60 transition-colors"
             >
               <RotateCcw className="w-3 h-3" />
@@ -97,9 +130,9 @@ export default function VerifyPage() {
 
       {/* Main */}
       <main className="flex-1 flex flex-col items-center px-3 sm:px-6 py-6 sm:py-8 lg:py-12">
-        {/* Intro */}
+        {/* Intro — show only when awaiting and no auto-load in progress */}
         <AnimatePresence>
-          {v.state === "AWAITING" && (
+          {v.state === "AWAITING" && !searchParams.get("claimId") && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -110,15 +143,56 @@ export default function VerifyPage() {
                 Verify a Patient Claim
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 mt-2">
-                Upload or paste a MedZK claim bundle to verify the proof without
-                accessing any private health data.
+                Upload, paste, or scan a QR code to verify the patient&apos;s
+                medical proof without accessing any private health data.
               </p>
             </motion.div>
           )}
         </AnimatePresence>
 
+        {/* Auto-load indicator */}
+        <AnimatePresence>
+          {v.state === "AWAITING" && searchParams.get("claimId") && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="text-center mb-6"
+            >
+              <GlassCard
+                glow="indigo"
+                padding="md"
+                className="max-w-sm mx-auto"
+              >
+                <div className="flex flex-col items-center gap-3 py-2">
+                  <motion.div
+                    className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center"
+                    animate={{ rotate: [0, 360] }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "linear",
+                    }}
+                  >
+                    <CheckCircle2 className="w-5 h-5 text-indigo-600" />
+                  </motion.div>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-700">
+                      Loading claim from QR code...
+                    </p>
+                    <p className="text-xs text-slate-400 font-mono mt-0.5">
+                      {searchParams.get("claimId")}
+                    </p>
+                  </div>
+                </div>
+              </GlassCard>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <AnimatePresence mode="wait">
-          {v.state === "AWAITING" && (
+          {/* AWAITING — only show upload if no auto-load */}
+          {v.state === "AWAITING" && !searchParams.get("claimId") && (
             <VerifierUpload
               key="upload"
               onLoad={v.loadBundle}
@@ -126,6 +200,7 @@ export default function VerifyPage() {
             />
           )}
 
+          {/* PARSING */}
           {v.state === "PARSING" && (
             <motion.div
               key="parsing"
@@ -155,6 +230,7 @@ export default function VerifyPage() {
             </motion.div>
           )}
 
+          {/* PARSED */}
           {v.state === "PARSED" && v.bundle && (
             <ParsedView
               key="parsed"
@@ -164,6 +240,7 @@ export default function VerifyPage() {
             />
           )}
 
+          {/* VERIFYING */}
           {v.state === "VERIFYING" && (
             <motion.div
               key="verifying"
@@ -227,6 +304,7 @@ export default function VerifyPage() {
             </motion.div>
           )}
 
+          {/* VALID / INVALID */}
           {(v.state === "VALID" || v.state === "INVALID") &&
             v.bundle &&
             v.result && (
@@ -236,10 +314,11 @@ export default function VerifyPage() {
                 result={v.result}
                 onApprove={handleApprove}
                 onReject={handleReject}
-                onReset={v.reset}
+                onReset={handleReset}
               />
             )}
 
+          {/* APPROVED / REJECTED */}
           {(v.state === "APPROVED" || v.state === "REJECTED") &&
             v.bundle &&
             v.approval && (
@@ -247,11 +326,12 @@ export default function VerifyPage() {
                 key="approval"
                 bundle={v.bundle}
                 approval={v.approval}
-                onReset={v.reset}
+                onReset={handleReset}
               />
             )}
         </AnimatePresence>
 
+        {/* Error toast */}
         <AnimatePresence>
           {v.error && v.state !== "AWAITING" && v.state !== "PARSED" && (
             <motion.div
@@ -304,7 +384,11 @@ function ParsedView({
           {[
             { label: "Claim ID", value: bundle.claimId, mono: true },
             { label: "Policy", value: bundle.policy.number, mono: true },
-            { label: "Type", value: bundle.policy.claimTypeLabel, mono: false },
+            {
+              label: "Type",
+              value: bundle.policy.claimTypeLabel,
+              mono: false,
+            },
             {
               label: "Lab",
               value: bundle.publicParams.labIdentifier,
@@ -314,13 +398,11 @@ function ParsedView({
               label: "Submitted",
               value: formatDateTime(bundle.createdAt),
               mono: false,
-              icon: Clock,
             },
             {
               label: "Proof",
               value: truncateHash(bundle.proof.hash, 8),
               mono: true,
-              icon: Fingerprint,
             },
           ].map((item) => (
             <div key={item.label}>
@@ -400,5 +482,21 @@ function ParsedView({
         </motion.button>
       </motion.div>
     </motion.div>
+  );
+}
+
+/* ── Page Export with Suspense ─────────────────────────────── */
+
+export default function VerifyPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <VerifyContent />
+    </Suspense>
   );
 }
