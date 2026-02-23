@@ -24,6 +24,7 @@ import {
   getExpiryDays,
   type ClaimBundle,
 } from "@/lib/claim-engine";
+import Link from "next/link";
 
 interface ProofShareProps {
   bundle: ClaimBundle;
@@ -294,12 +295,14 @@ export function ProofShare({ bundle, onShared }: ProofShareProps) {
             <p className="text-[10px] sm:text-xs text-emerald-700 font-medium">
               Insurer verifies at:
             </p>
-            <code className="text-[10px] sm:text-[11px] font-mono text-emerald-600 bg-emerald-100/60 px-1.5 py-0.5 rounded inline-flex items-center gap-1 mt-0.5">
-              {typeof window !== "undefined"
-                ? `${window.location.origin}/verify`
-                : "/verify"}
-              <ExternalLink className="w-2.5 h-2.5" />
-            </code>
+            <Link href="/verify" target="_blank">
+              <code className="text-[10px] sm:text-[11px] font-mono text-emerald-600 bg-emerald-100/60 px-1.5 py-0.5 rounded inline-flex items-center gap-1 mt-0.5">
+                {typeof window !== "undefined"
+                  ? `${window.location.origin}/verify`
+                  : "/verify"}
+                <ExternalLink className="w-2.5 h-2.5" />
+              </code>
+            </Link>
           </div>
         </div>
       </GlassCard>
