@@ -13,6 +13,7 @@ import {
   Clock,
   Fingerprint,
   CheckCircle2,
+  Smartphone,
 } from "lucide-react";
 import { useVerifier } from "@/hooks/use-verifier";
 import { GlassCard } from "@/components/glass-card";
@@ -20,32 +21,77 @@ import { VerifierUpload } from "@/components/verifier-upload";
 import { VerifierResult } from "@/components/verifier-result";
 import { ApprovalConfirmation } from "@/components/approval-confirmation";
 import { cn, formatDateTime, truncateHash } from "@/lib/utils";
-import { publishStatusUpdate } from "@/lib/claim-sync";
-import { retrieveClaimBundle } from "@/lib/claim-sync";
+import { publishStatusUpdate, retrieveClaimBundle } from "@/lib/claim-sync";
 import Link from "next/link";
+
+/**
+ * Decode base64-encoded bundle from URL param.
+ */
+function decodeBundleData(encoded: string): string | null {
+  try {
+    const decoded = decodeURIComponent(
+      atob(encoded)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join(""),
+    );
+    // Validate it's actual JSON
+    JSON.parse(decoded);
+    return decoded;
+  } catch {
+    return null;
+  }
+}
 
 function VerifyContent() {
   const searchParams = useSearchParams();
   const v = useVerifier();
   const [autoLoaded, setAutoLoaded] = useState(false);
+  const [autoLoadSource, setAutoLoadSource] = useState<
+    "qr" | "link" | "local" | null
+  >(null);
 
-  // Auto-load claim from URL params (from QR code scan)
+  // Auto-load claim from URL params
   useEffect(() => {
     if (autoLoaded || v.state !== "AWAITING") return;
 
+    const dataParam = searchParams.get("data");
     const claimId = searchParams.get("claimId");
-    if (!claimId) return;
 
-    const bundle = retrieveClaimBundle(claimId);
-    if (bundle) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+    // Priority 1: Encoded bundle data in URL (works cross-device)
+    if (dataParam) {
+      const decoded = decodeBundleData(dataParam);
+      if (decoded) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setAutoLoaded(true);
+        setAutoLoadSource("qr");
+        setTimeout(() => {
+          v.loadBundle(decoded);
+        }, 800);
+        return;
+      }
+    }
+
+    // Priority 2: ClaimId — try localStorage (same browser only)
+    if (claimId) {
+      const bundle = retrieveClaimBundle(claimId);
+      if (bundle) {
+        setAutoLoaded(true);
+        setAutoLoadSource("local");
+        setTimeout(() => {
+          v.loadBundle(JSON.stringify(bundle));
+        }, 800);
+        return;
+      }
+
+      // ClaimId exists but no bundle found (cross-device without data param)
+      // This shouldn't happen with the new QR encoding, but handle gracefully
       setAutoLoaded(true);
-      // Small delay so the user sees the page first
-      setTimeout(() => {
-        v.loadBundle(JSON.stringify(bundle));
-      }, 500);
+      setAutoLoadSource(null);
     }
   }, [searchParams, v, autoLoaded]);
+
+  const hasUrlParams = searchParams.get("data") || searchParams.get("claimId");
 
   const handleVerify = () => {
     if (v.bundle) {
@@ -69,7 +115,7 @@ function VerifyContent() {
   const handleReset = () => {
     v.reset();
     setAutoLoaded(false);
-    // Clear the URL params without reload
+    setAutoLoadSource(null);
     if (typeof window !== "undefined") {
       window.history.replaceState({}, "", "/verify");
     }
@@ -130,9 +176,9 @@ function VerifyContent() {
 
       {/* Main */}
       <main className="flex-1 flex flex-col items-center px-3 sm:px-6 py-6 sm:py-8 lg:py-12">
-        {/* Intro — show only when awaiting and no auto-load in progress */}
+        {/* Intro — only when no URL params */}
         <AnimatePresence>
-          {v.state === "AWAITING" && !searchParams.get("claimId") && (
+          {v.state === "AWAITING" && !hasUrlParams && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -144,19 +190,19 @@ function VerifyContent() {
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 mt-2">
                 Upload, paste, or scan a QR code to verify the patient&apos;s
-                medical proof without accessing any private health data.
+                proof without accessing private health data.
               </p>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Auto-load indicator */}
+        {/* Auto-loading indicator */}
         <AnimatePresence>
-          {v.state === "AWAITING" && searchParams.get("claimId") && (
+          {v.state === "AWAITING" && hasUrlParams && (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
               className="text-center mb-6"
             >
               <GlassCard
@@ -166,23 +212,45 @@ function VerifyContent() {
               >
                 <div className="flex flex-col items-center gap-3 py-2">
                   <motion.div
-                    className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center"
-                    animate={{ rotate: [0, 360] }}
+                    className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center"
+                    animate={{ scale: [1, 1.1, 1] }}
                     transition={{
-                      duration: 2,
+                      duration: 1.5,
                       repeat: Infinity,
-                      ease: "linear",
+                      ease: "easeInOut",
                     }}
                   >
-                    <CheckCircle2 className="w-5 h-5 text-indigo-600" />
+                    {autoLoadSource === "qr" ? (
+                      <Smartphone className="w-6 h-6 text-indigo-600" />
+                    ) : (
+                      <CheckCircle2 className="w-6 h-6 text-indigo-600" />
+                    )}
                   </motion.div>
                   <div>
                     <p className="text-sm font-semibold text-slate-700">
-                      Loading claim from QR code...
+                      {autoLoadSource === "qr"
+                        ? "Loading claim from QR scan..."
+                        : "Loading claim..."}
                     </p>
                     <p className="text-xs text-slate-400 font-mono mt-0.5">
-                      {searchParams.get("claimId")}
+                      {searchParams.get("claimId") ?? "Decoding..."}
                     </p>
+                  </div>
+
+                  {/* Progress dots */}
+                  <div className="flex items-center gap-1.5">
+                    {[0, 1, 2].map((i) => (
+                      <motion.div
+                        key={i}
+                        className="w-2 h-2 rounded-full bg-indigo-400"
+                        animate={{ opacity: [0.3, 1, 0.3] }}
+                        transition={{
+                          duration: 1,
+                          repeat: Infinity,
+                          delay: i * 0.3,
+                        }}
+                      />
+                    ))}
                   </div>
                 </div>
               </GlassCard>
@@ -191,8 +259,8 @@ function VerifyContent() {
         </AnimatePresence>
 
         <AnimatePresence mode="wait">
-          {/* AWAITING — only show upload if no auto-load */}
-          {v.state === "AWAITING" && !searchParams.get("claimId") && (
+          {/* AWAITING — show upload only when no auto-load */}
+          {v.state === "AWAITING" && !hasUrlParams && (
             <VerifierUpload
               key="upload"
               onLoad={v.loadBundle}
@@ -237,6 +305,7 @@ function VerifyContent() {
               bundle={v.bundle}
               onVerify={handleVerify}
               error={v.error}
+              autoLoadSource={autoLoadSource}
             />
           )}
 
@@ -361,10 +430,12 @@ function ParsedView({
   bundle,
   onVerify,
   error,
+  autoLoadSource,
 }: {
   bundle: NonNullable<ReturnType<typeof useVerifier>["bundle"]>;
   onVerify: () => void;
   error: string | null;
+  autoLoadSource: "qr" | "link" | "local" | null;
 }) {
   return (
     <motion.div
@@ -374,6 +445,22 @@ function ParsedView({
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       className="w-full max-w-2xl mx-auto space-y-4 sm:space-y-5"
     >
+      {/* Auto-loaded badge */}
+      {autoLoadSource && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex justify-center"
+        >
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/50 text-[10px] sm:text-xs font-semibold text-emerald-700">
+            <Smartphone className="w-3 h-3" />
+            {autoLoadSource === "qr"
+              ? "Loaded from QR code scan"
+              : "Loaded from shared link"}
+          </div>
+        </motion.div>
+      )}
+
       <GlassCard glow="indigo" padding="md" className="sm:p-8">
         <h3 className="text-xs sm:text-sm font-semibold text-slate-700 mb-3 sm:mb-4 flex items-center gap-2">
           <FileText className="w-4 h-4 text-indigo-500" />
@@ -384,11 +471,7 @@ function ParsedView({
           {[
             { label: "Claim ID", value: bundle.claimId, mono: true },
             { label: "Policy", value: bundle.policy.number, mono: true },
-            {
-              label: "Type",
-              value: bundle.policy.claimTypeLabel,
-              mono: false,
-            },
+            { label: "Type", value: bundle.policy.claimTypeLabel, mono: false },
             {
               label: "Lab",
               value: bundle.publicParams.labIdentifier,
@@ -485,7 +568,7 @@ function ParsedView({
   );
 }
 
-/* ── Page Export with Suspense ─────────────────────────────── */
+/* ── Page Export ───────────────────────────────────────────── */
 
 export default function VerifyPage() {
   return (

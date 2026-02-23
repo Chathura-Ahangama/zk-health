@@ -13,7 +13,6 @@ import { GlassCard } from "./glass-card";
 import { QRScanner } from "./qr-scanner";
 import { cn } from "@/lib/utils";
 import { retrieveClaimBundle } from "@/lib/claim-sync";
-import { serializeBundle, type ClaimBundle } from "@/lib/claim-engine";
 
 interface VerifierUploadProps {
   onLoad: (input: string | File) => void;
@@ -21,6 +20,38 @@ interface VerifierUploadProps {
 }
 
 type InputMode = "upload" | "paste" | "scan";
+
+/**
+ * Decode a base64-encoded bundle from a URL.
+ */
+function decodeBundleFromURL(urlString: string): string | null {
+  try {
+    const url = new URL(urlString);
+    const encoded = url.searchParams.get("data");
+
+    if (encoded) {
+      // Decode base64 → JSON string
+      const decoded = decodeURIComponent(
+        atob(encoded)
+          .split("")
+          .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+          .join(""),
+      );
+      return decoded;
+    }
+
+    // Fallback: try claimId from localStorage
+    const claimId = url.searchParams.get("claimId");
+    if (claimId) {
+      const bundle = retrieveClaimBundle(claimId);
+      if (bundle) return JSON.stringify(bundle);
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 export function VerifierUpload({ onLoad, error }: VerifierUploadProps) {
   const [isDragOver, setIsDragOver] = useState(false);
@@ -63,28 +94,39 @@ export function VerifierUpload({ onLoad, error }: VerifierUploadProps) {
 
   const handleQRScan = useCallback(
     (data: string) => {
-      // The QR contains a URL like /verify?claimId=CLM-XXX
-      // Extract the claimId from the URL
+      // Try to extract bundle from URL (cross-device)
+      const decoded = decodeBundleFromURL(data);
+      if (decoded) {
+        onLoad(decoded);
+        return;
+      }
+
+      // Maybe it's raw JSON
+      try {
+        JSON.parse(data);
+        onLoad(data);
+        return;
+      } catch {
+        // Not JSON either
+      }
+
+      // Last resort — try as URL with claimId only (same browser)
       try {
         const url = new URL(data);
         const claimId = url.searchParams.get("claimId");
-
         if (claimId) {
-          // Try to load from localStorage
           const bundle = retrieveClaimBundle(claimId);
           if (bundle) {
-            // Found the bundle — pass it as JSON string
             onLoad(JSON.stringify(bundle));
             return;
           }
         }
-
-        // If URL parsing fails or no bundle found, try treating data as raw JSON
-        onLoad(data);
       } catch {
-        // Not a URL — maybe it's raw JSON
-        onLoad(data);
+        // Not a URL
       }
+
+      // Nothing worked
+      onLoad(data); // Let the parser show the error
     },
     [onLoad],
   );
