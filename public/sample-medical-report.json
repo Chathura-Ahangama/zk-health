@@ -1,0 +1,13 @@
+{
+  "patientId": "MED-2024-7829",
+  "sugar": 142,
+  "cholesterol": 185,
+  "bloodPressure": {
+    "systolic": 128,
+    "diastolic": 82
+  },
+  "hemoglobin": 14.2,
+  "creatinine": 0.9,
+  "timestamp": "2024-01-15T10:30:00Z",
+  "labName": "Metro Diagnostics Lab"
+}

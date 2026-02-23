@@ -1,26 +1,143 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --font-sans:
+    "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui,
+    sans-serif;
+  --font-mono:
+    "JetBrains Mono", "SF Mono", "Fira Code", "Cascadia Code", monospace;
+
+  --color-glass: oklch(1 0 0 / 0.72);
+  --color-glass-strong: oklch(1 0 0 / 0.85);
+  --color-glass-border: oklch(1 0 0 / 0.35);
+  --color-deep-indigo: oklch(0.55 0.25 270);
+  --color-deep-violet: oklch(0.55 0.25 290);
+  --color-proof-glow: oklch(0.65 0.2 270 / 0.15);
+  --color-verified-glow: oklch(0.7 0.2 155 / 0.15);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  background: linear-gradient(
+    140deg,
+    #f8fafc 0%,
+    #eef2ff 30%,
+    #f5f3ff 55%,
+    #ede9fe 75%,
+    #f8fafc 100%
+  );
+  background-attachment: fixed;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(
+      ellipse 60% 50% at 20% 20%,
+      rgba(199, 210, 254, 0.25) 0%,
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 50% 60% at 80% 80%,
+      rgba(221, 214, 254, 0.2) 0%,
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 40% 40% at 50% 50%,
+      rgba(224, 231, 255, 0.15) 0%,
+      transparent 70%
+    );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Scanning animation keyframes */
+@keyframes scan-line {
+  0% {
+    top: -2px;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    top: calc(100% + 2px);
+    opacity: 0;
+  }
+}
+
+@keyframes glow-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 20px rgba(99, 102, 241, 0.08),
+      0 0 60px rgba(99, 102, 241, 0.04);
+  }
+  50% {
+    box-shadow:
+      0 0 30px rgba(99, 102, 241, 0.18),
+      0 0 80px rgba(99, 102, 241, 0.08);
+  }
+}
+
+@keyframes subtle-float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes dash-flow {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+
+/* Proof hash glow */
+.proof-glow {
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.2);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.35);
+}
+
+/* Selection color */
+::selection {
+  background: rgba(99, 102, 241, 0.15);
+  color: #312e81;
 }
