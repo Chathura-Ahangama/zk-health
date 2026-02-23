@@ -61,5 +61,5 @@ Status Updated ◄──── Decision Synced
 
 ## Team
 
-Chathura Ahangama
-Li Dantong
+Chathura Ahangama,A Engineer
+Li Dantong,A doctor
