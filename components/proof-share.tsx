@@ -16,6 +16,7 @@ import {
   ChevronDown,
   ChevronUp,
   Link as LinkIcon,
+  Link,
 } from "lucide-react";
 import { GlassCard } from "./glass-card";
 import { QRProof } from "./qr-proof";
@@ -369,12 +370,14 @@ export function ProofShare({ bundle, onShared }: ProofShareProps) {
               Insurer can verify by scanning QR, opening the link, or uploading
               the JSON
             </p>
-            <code className="text-[10px] sm:text-[11px] font-mono text-emerald-600 bg-emerald-100/60 px-1.5 py-0.5 rounded inline-flex items-center gap-1 mt-0.5">
-              {typeof window !== "undefined"
-                ? `${window.location.origin}/verify`
-                : "/verify"}
-              <ExternalLink className="w-2.5 h-2.5" />
-            </code>
+            <Link href="/verify" target="_blank">
+              <code className="text-[10px] sm:text-[11px] font-mono text-emerald-600 bg-emerald-100/60 px-1.5 py-0.5 rounded inline-flex items-center gap-1 mt-0.5">
+                {typeof window !== "undefined"
+                  ? `${window.location.origin}/verify`
+                  : "/verify"}
+                <ExternalLink className="w-2.5 h-2.5" />
+              </code>
+            </Link>
           </div>
         </div>
       </GlassCard>
