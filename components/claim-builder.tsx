@@ -59,7 +59,7 @@ export function ClaimBuilder({ proof, onSubmit }: ClaimBuilderProps) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-      className="w-full max-w-2xl mx-auto space-y-5"
+      className="w-full max-w-2xl mx-auto space-y-4 sm:space-y-5"
     >
       {/* Header */}
       <div className="text-center space-y-2">
@@ -67,45 +67,44 @@ export function ClaimBuilder({ proof, onSubmit }: ClaimBuilderProps) {
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: "spring", stiffness: 200 }}
-          className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 shadow-lg shadow-indigo-300/30 mx-auto"
+          className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 shadow-lg shadow-indigo-300/30 mx-auto"
         >
-          <FileText className="w-6 h-6 text-white" />
+          <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
         </motion.div>
-        <h2 className="text-xl font-bold text-slate-800">
+        <h2 className="text-lg sm:text-xl font-bold text-slate-800">
           Prepare Insurance Claim
         </h2>
-        <p className="text-sm text-slate-500 max-w-md mx-auto">
-          Attach your zero-knowledge proof to a claim. Only the proof and policy
-          details are shared — your medical values stay private.
+        <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto px-4">
+          Attach your proof to a claim. Only the proof and policy details are
+          shared — your medical values stay private.
         </p>
       </div>
 
       {/* Privacy reminder */}
       <GlassCard padding="sm" className="bg-indigo-50/30 border-indigo-200/30">
-        <div className="flex items-start gap-3">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-100 flex-shrink-0 mt-0.5">
-            <Lock className="w-4 h-4 text-indigo-600" />
+        <div className="flex items-start gap-2.5 sm:gap-3">
+          <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-indigo-100 flex-shrink-0 mt-0.5">
+            <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-600" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-indigo-800">
+            <p className="text-[10px] sm:text-xs font-semibold text-indigo-800">
               What the insurer will see:
             </p>
-            <ul className="mt-1 text-[11px] text-indigo-600 space-y-0.5">
-              <li>✓ Cryptographic proof (opaque — reveals nothing)</li>
-              <li>✓ Public thresholds (e.g., &quot;Sugar &gt; 126&quot;)</li>
-              <li>✓ Policy number and claim type</li>
-              <li>✗ Actual blood sugar, cholesterol, or any medical values</li>
+            <ul className="mt-1 text-[10px] sm:text-[11px] text-indigo-600 space-y-0.5">
+              <li>✓ Cryptographic proof (reveals nothing)</li>
+              <li>✓ Thresholds (e.g., &quot;Sugar &gt; 126&quot;)</li>
+              <li>✗ Actual blood sugar or cholesterol values</li>
             </ul>
           </div>
         </div>
       </GlassCard>
 
       {/* Form */}
-      <GlassCard glow="indigo" padding="lg">
-        <div className="space-y-5">
+      <GlassCard glow="indigo" padding="md" className="sm:p-8">
+        <div className="space-y-4 sm:space-y-5">
           {/* Policy Number */}
           <div className="space-y-1.5">
-            <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+            <label className="flex items-center gap-1.5 text-[10px] sm:text-xs font-semibold text-slate-600 uppercase tracking-wider">
               <Tag className="w-3.5 h-3.5" />
               Policy Number
             </label>
@@ -115,7 +114,7 @@ export function ClaimBuilder({ proof, onSubmit }: ClaimBuilderProps) {
               onChange={(e) => setPolicyNumber(e.target.value)}
               placeholder="e.g., POL-2024-001234"
               className={cn(
-                "w-full px-4 py-3 rounded-xl text-sm font-mono",
+                "w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl text-sm font-mono",
                 "bg-white/80 border transition-colors",
                 "placeholder:text-slate-300",
                 "focus:outline-none focus:ring-2 focus:ring-indigo-400/40 focus:border-indigo-300",
@@ -125,13 +124,15 @@ export function ClaimBuilder({ proof, onSubmit }: ClaimBuilderProps) {
               )}
             />
             {errors.policyNumber && (
-              <p className="text-xs text-red-500">{errors.policyNumber}</p>
+              <p className="text-[10px] sm:text-xs text-red-500">
+                {errors.policyNumber}
+              </p>
             )}
           </div>
 
           {/* Insurance Company */}
           <div className="space-y-1.5">
-            <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+            <label className="flex items-center gap-1.5 text-[10px] sm:text-xs font-semibold text-slate-600 uppercase tracking-wider">
               <Building2 className="w-3.5 h-3.5" />
               Insurance Company
             </label>
@@ -141,7 +142,7 @@ export function ClaimBuilder({ proof, onSubmit }: ClaimBuilderProps) {
               onChange={(e) => setInsurerName(e.target.value)}
               placeholder="e.g., Blue Cross Health Insurance"
               className={cn(
-                "w-full px-4 py-3 rounded-xl text-sm",
+                "w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl text-sm",
                 "bg-white/80 border transition-colors",
                 "placeholder:text-slate-300",
                 "focus:outline-none focus:ring-2 focus:ring-indigo-400/40 focus:border-indigo-300",
@@ -151,13 +152,15 @@ export function ClaimBuilder({ proof, onSubmit }: ClaimBuilderProps) {
               )}
             />
             {errors.insurerName && (
-              <p className="text-xs text-red-500">{errors.insurerName}</p>
+              <p className="text-[10px] sm:text-xs text-red-500">
+                {errors.insurerName}
+              </p>
             )}
           </div>
 
           {/* Claim Type */}
           <div className="space-y-1.5">
-            <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+            <label className="flex items-center gap-1.5 text-[10px] sm:text-xs font-semibold text-slate-600 uppercase tracking-wider">
               <ShieldCheck className="w-3.5 h-3.5" />
               Claim Type
             </label>
@@ -168,7 +171,7 @@ export function ClaimBuilder({ proof, onSubmit }: ClaimBuilderProps) {
                   onClick={() => setClaimType(key as ClaimType)}
                   whileTap={{ scale: 0.99 }}
                   className={cn(
-                    "flex items-start gap-3 px-4 py-3 rounded-xl text-left transition-all border",
+                    "flex items-start gap-2.5 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl text-left transition-all border",
                     claimType === key
                       ? "bg-indigo-50 border-indigo-300 ring-1 ring-indigo-200"
                       : "bg-white/60 border-slate-200/60 hover:border-slate-300",
@@ -189,7 +192,7 @@ export function ClaimBuilder({ proof, onSubmit }: ClaimBuilderProps) {
                   <div>
                     <p
                       className={cn(
-                        "text-sm font-semibold",
+                        "text-xs sm:text-sm font-semibold",
                         claimType === key
                           ? "text-indigo-800"
                           : "text-slate-700",
@@ -197,7 +200,7 @@ export function ClaimBuilder({ proof, onSubmit }: ClaimBuilderProps) {
                     >
                       {config.label}
                     </p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
+                    <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5">
                       {config.description}
                     </p>
                   </div>
@@ -208,9 +211,9 @@ export function ClaimBuilder({ proof, onSubmit }: ClaimBuilderProps) {
 
           {/* Notes */}
           <div className="space-y-1.5">
-            <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+            <label className="flex items-center gap-1.5 text-[10px] sm:text-xs font-semibold text-slate-600 uppercase tracking-wider">
               <MessageSquare className="w-3.5 h-3.5" />
-              Additional Notes
+              Notes
               <span className="text-slate-400 font-normal normal-case">
                 (optional)
               </span>
@@ -218,41 +221,41 @@ export function ClaimBuilder({ proof, onSubmit }: ClaimBuilderProps) {
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Any additional information for the insurer..."
+              placeholder="Any additional information..."
               rows={3}
-              className="w-full px-4 py-3 rounded-xl text-sm bg-white/80 border border-slate-200/80 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-400/40 focus:border-indigo-300 resize-none"
+              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl text-sm bg-white/80 border border-slate-200/80 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-400/40 focus:border-indigo-300 resize-none"
             />
           </div>
         </div>
       </GlassCard>
 
-      {/* Proof attached indicator */}
+      {/* Proof attached */}
       <GlassCard padding="sm" className="bg-slate-50/50">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-50">
-            <Info className="w-4 h-4 text-emerald-600" />
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-50 flex-shrink-0">
+            <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[11px] font-medium text-slate-500">
+            <p className="text-[10px] sm:text-[11px] font-medium text-slate-500">
               Attached Proof
             </p>
-            <p className="text-xs font-mono text-slate-600 truncate">
-              {proof.proofHash.slice(0, 30)}...
+            <p className="text-[10px] sm:text-xs font-mono text-slate-600 truncate">
+              {proof.proofHash.slice(0, 24)}...
             </p>
           </div>
-          <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-700 uppercase">
+          <span className="px-2 py-0.5 rounded text-[8px] sm:text-[9px] font-bold bg-emerald-100 text-emerald-700 uppercase flex-shrink-0">
             Attached
           </span>
         </div>
       </GlassCard>
 
       {/* Submit */}
-      <motion.div className="flex justify-center pt-2">
+      <motion.div className="flex justify-center pt-1 sm:pt-2">
         <motion.button
           onClick={handleSubmit}
           whileHover={{ scale: 1.02, y: -1 }}
           whileTap={{ scale: 0.98 }}
-          className="flex items-center gap-2.5 px-8 py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-semibold tracking-wide shadow-lg shadow-indigo-400/25 hover:shadow-xl hover:shadow-indigo-400/35 transition-shadow"
+          className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-8 py-3 sm:py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-xs sm:text-sm font-semibold tracking-wide shadow-lg shadow-indigo-400/25 hover:shadow-xl hover:shadow-indigo-400/35 transition-shadow"
         >
           Build Claim Bundle
           <ArrowRight className="w-4 h-4" />

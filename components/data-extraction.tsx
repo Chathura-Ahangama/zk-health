@@ -79,31 +79,31 @@ export function DataExtraction({ data, onGenerateProof }: DataExtractionProps) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-      className="w-full max-w-3xl mx-auto space-y-6"
+      className="w-full max-w-3xl mx-auto space-y-4 sm:space-y-6"
     >
       {/* Header */}
-      <div className="text-center">
+      <div className="text-center px-2">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.2 }}
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 border border-indigo-200/50 text-xs font-semibold text-indigo-600 mb-3"
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 border border-indigo-200/50 text-[10px] sm:text-xs font-semibold text-indigo-600 mb-3"
         >
           <ShieldAlert className="w-3 h-3" />
-          Values remain private — only the proof leaves your device
+          <span className="hidden sm:inline">
+            Values remain private — only the proof leaves your device
+          </span>
+          <span className="sm:hidden">Values stay private</span>
         </motion.div>
         {data.labName && (
-          <p className="text-xs text-slate-400 mt-1">
-            Source: {data.labName} •{" "}
-            {data.timestamp
-              ? new Date(data.timestamp).toLocaleDateString()
-              : ""}
+          <p className="text-[10px] sm:text-xs text-slate-400 mt-1">
+            Source: {data.labName}
           </p>
         )}
       </div>
 
       {/* Data Grid */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         {fields.map((field, idx) => {
           const Icon = field.icon;
           const value = field.getValue(data);
@@ -123,36 +123,36 @@ export function DataExtraction({ data, onGenerateProof }: DataExtractionProps) {
                 padding="sm"
                 className="group hover:shadow-lg hover:shadow-indigo-100/50 transition-shadow duration-300"
               >
-                <div className="flex items-start justify-between">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div
                       className={cn(
-                        "flex items-center justify-center w-10 h-10 rounded-xl",
+                        "flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl",
                         field.bgColor,
                       )}
                     >
-                      <Icon className={cn("w-5 h-5", field.color)} />
+                      <Icon
+                        className={cn("w-4 h-4 sm:w-5 sm:h-5", field.color)}
+                      />
                     </div>
                     <div>
-                      <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+                      <p className="text-[10px] sm:text-[11px] font-medium text-slate-400 uppercase tracking-wider">
                         {field.label}
                       </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        {/* Blurred value */}
+                      <div className="flex items-center gap-2 mt-0.5 sm:mt-1">
                         <span
-                          className="text-xl font-bold text-slate-800 select-none"
+                          className="text-lg sm:text-xl font-bold text-slate-800 select-none"
                           style={{ filter: "blur(8px)" }}
                         >
                           {value}
                         </span>
-                        <span className="text-xs text-slate-400 font-medium">
+                        <span className="text-[10px] sm:text-xs text-slate-400 font-medium">
                           {field.unit}
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Lock icon */}
                   <motion.div
                     className="flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-colors"
                     whileHover={{ rotate: [0, -10, 10, 0] }}
@@ -174,17 +174,19 @@ export function DataExtraction({ data, onGenerateProof }: DataExtractionProps) {
         transition={{ delay: 0.6 }}
       >
         <GlassCard padding="sm" className="bg-indigo-50/30">
-          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-3">
+          <p className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2 sm:mb-3">
             Circuit Constraints (Public)
           </p>
-          <div className="space-y-2">
+          <div className="space-y-1.5 sm:space-y-2">
             {Object.entries(THRESHOLDS).map(([key, threshold]) => (
               <div
                 key={key}
-                className="flex items-center gap-2 text-sm text-slate-600"
+                className="flex items-center gap-2 text-xs sm:text-sm text-slate-600"
               >
                 <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
-                <span className="font-mono text-xs">{threshold.label}</span>
+                <span className="font-mono text-[11px] sm:text-xs">
+                  {threshold.label}
+                </span>
               </div>
             ))}
           </div>
@@ -193,7 +195,7 @@ export function DataExtraction({ data, onGenerateProof }: DataExtractionProps) {
 
       {/* Generate Proof button */}
       <motion.div
-        className="flex justify-center pt-2"
+        className="flex justify-center pt-1 sm:pt-2"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.7 }}
@@ -203,9 +205,9 @@ export function DataExtraction({ data, onGenerateProof }: DataExtractionProps) {
           whileHover={{ scale: 1.02, y: -1 }}
           whileTap={{ scale: 0.98 }}
           className={cn(
-            "relative flex items-center gap-2.5 px-8 py-3.5 rounded-xl",
+            "relative flex items-center gap-2 sm:gap-2.5 px-5 sm:px-8 py-3 sm:py-3.5 rounded-xl",
             "bg-gradient-to-r from-indigo-600 to-violet-600",
-            "text-white text-sm font-semibold tracking-wide",
+            "text-white text-xs sm:text-sm font-semibold tracking-wide",
             "shadow-lg shadow-indigo-400/25",
             "hover:shadow-xl hover:shadow-indigo-400/35 transition-shadow",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2",

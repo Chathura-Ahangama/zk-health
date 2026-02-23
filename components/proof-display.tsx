@@ -47,7 +47,7 @@ export function ProofDisplay({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-      className="w-full max-w-3xl mx-auto space-y-5"
+      className="w-full max-w-3xl mx-auto space-y-4 sm:space-y-5"
     >
       {/* Self-verified badge */}
       <AnimatePresence>
@@ -67,16 +67,16 @@ export function ProofDisplay({
                   initial={{ scale: 0, rotate: -180 }}
                   animate={{ scale: 1, rotate: 0 }}
                   transition={{ type: "spring", stiffness: 200 }}
-                  className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 shadow-md shadow-emerald-300/30"
+                  className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 shadow-md shadow-emerald-300/30 flex-shrink-0"
                 >
-                  <BadgeCheck className="w-5 h-5 text-white" />
+                  <BadgeCheck className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                 </motion.div>
                 <div>
-                  <h3 className="text-sm font-bold text-emerald-800">
+                  <h3 className="text-xs sm:text-sm font-bold text-emerald-800">
                     Self-Verified ✓
                   </h3>
-                  <p className="text-xs text-emerald-600">
-                    Proof is valid. Ready to attach to an insurance claim.
+                  <p className="text-[10px] sm:text-xs text-emerald-600">
+                    Proof is valid. Ready for insurance claim.
                   </p>
                 </div>
               </div>
@@ -86,15 +86,17 @@ export function ProofDisplay({
       </AnimatePresence>
 
       {/* Proof hash */}
-      <GlassCard glow="indigo" padding="md">
-        <div className="flex items-center justify-between mb-4">
+      <GlassCard glow="indigo" padding="sm" className="sm:p-6">
+        <div className="flex items-center justify-between mb-3 sm:mb-4">
           <div className="flex items-center gap-2">
             <Fingerprint className="w-4 h-4 text-indigo-500" />
-            <h3 className="text-sm font-semibold text-slate-700">Proof Hash</h3>
+            <h3 className="text-xs sm:text-sm font-semibold text-slate-700">
+              Proof Hash
+            </h3>
           </div>
           <button
             onClick={copyHash}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+            className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] sm:text-xs text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
           >
             {copied ? (
               <Check className="w-3 h-3 text-emerald-500" />
@@ -106,7 +108,7 @@ export function ProofDisplay({
         </div>
 
         <motion.div
-          className="relative p-4 rounded-xl font-mono text-xs leading-relaxed break-all bg-slate-900 text-indigo-300 border border-slate-700/50 overflow-hidden"
+          className="relative p-3 sm:p-4 rounded-xl font-mono text-[10px] sm:text-xs leading-relaxed break-all bg-slate-900 text-indigo-300 border border-slate-700/50 overflow-hidden"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
@@ -117,30 +119,36 @@ export function ProofDisplay({
             transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
           />
           <span className="text-slate-500">proof: </span>
-          <span className="text-indigo-300">{proof.proofHash}</span>
+          <span className="text-indigo-300">
+            {/* Show truncated on mobile, full on desktop */}
+            <span className="sm:hidden">
+              {truncateHash(proof.proofHash, 20)}
+            </span>
+            <span className="hidden sm:inline">{proof.proofHash}</span>
+          </span>
         </motion.div>
       </GlassCard>
 
       {/* Metadata grid */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
         {[
           {
             icon: Clock,
-            label: "Timestamp",
+            label: "Time",
             value: formatTimestamp(proof.timestamp),
             color: "text-blue-500",
             bg: "bg-blue-50",
           },
           {
             icon: Cpu,
-            label: "Constraints",
+            label: "Gates",
             value: proof.constraintCount.toLocaleString(),
             color: "text-violet-500",
             bg: "bg-violet-50",
           },
           {
             icon: Hash,
-            label: "Proving Time",
+            label: "Proved in",
             value: `${(proof.provingTimeMs / 1000).toFixed(1)}s`,
             color: "text-amber-500",
             bg: "bg-amber-50",
@@ -155,20 +163,22 @@ export function ProofDisplay({
               transition={{ delay: 0.3 + idx * 0.1 }}
             >
               <GlassCard padding="sm">
-                <div className="flex items-center gap-2.5">
+                <div className="flex flex-col sm:flex-row items-center sm:items-center gap-1.5 sm:gap-2.5">
                   <div
                     className={cn(
-                      "flex items-center justify-center w-8 h-8 rounded-lg",
+                      "flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg",
                       item.bg,
                     )}
                   >
-                    <Icon className={cn("w-4 h-4", item.color)} />
+                    <Icon
+                      className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4", item.color)}
+                    />
                   </div>
-                  <div>
-                    <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">
+                  <div className="text-center sm:text-left">
+                    <p className="text-[8px] sm:text-[10px] font-medium text-slate-400 uppercase tracking-wider">
                       {item.label}
                     </p>
-                    <p className="text-sm font-bold text-slate-700 font-mono">
+                    <p className="text-xs sm:text-sm font-bold text-slate-700 font-mono">
                       {item.value}
                     </p>
                   </div>
@@ -180,23 +190,25 @@ export function ProofDisplay({
       </div>
 
       {/* Public Inputs */}
-      <GlassCard padding="md">
-        <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+      <GlassCard padding="sm" className="sm:p-6">
+        <h4 className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 sm:mb-3">
           Public Inputs (visible to insurer)
         </h4>
-        <div className="space-y-2">
+        <div className="space-y-1.5 sm:space-y-2">
           {proof.publicInputs.map((input, idx) => (
             <motion.div
               key={idx}
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.4 + idx * 0.1 }}
-              className="flex items-center gap-3 py-1.5"
+              className="flex items-center gap-2 sm:gap-3 py-1"
             >
-              <span className="flex items-center justify-center w-5 h-5 rounded text-[9px] font-bold bg-slate-100 text-slate-500">
+              <span className="flex items-center justify-center w-5 h-5 rounded text-[9px] font-bold bg-slate-100 text-slate-500 flex-shrink-0">
                 {idx}
               </span>
-              <code className="text-xs font-mono text-slate-600">{input}</code>
+              <code className="text-[10px] sm:text-xs font-mono text-slate-600 break-all">
+                {input}
+              </code>
             </motion.div>
           ))}
         </div>
@@ -204,12 +216,11 @@ export function ProofDisplay({
 
       {/* Action buttons */}
       <motion.div
-        className="flex items-center justify-center gap-3 pt-2"
+        className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 sm:gap-3 pt-1 sm:pt-2"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.6 }}
       >
-        {/* Self-verify */}
         {!selfVerified && (
           <motion.button
             onClick={onSelfVerify}
@@ -217,8 +228,8 @@ export function ProofDisplay({
             whileTap={{ scale: 0.98 }}
             disabled={progress > 0}
             className={cn(
-              "flex items-center gap-2 px-5 py-3 rounded-xl",
-              "bg-white border border-slate-200 text-sm font-semibold text-slate-700",
+              "flex items-center justify-center gap-2 px-5 py-3 rounded-xl",
+              "bg-white border border-slate-200 text-xs sm:text-sm font-semibold text-slate-700",
               "hover:border-indigo-300 hover:bg-indigo-50/50 transition-all",
               "disabled:opacity-50 disabled:cursor-not-allowed",
             )}
@@ -245,15 +256,14 @@ export function ProofDisplay({
           </motion.button>
         )}
 
-        {/* Build claim */}
         <motion.button
           onClick={onBuildClaim}
           whileHover={{ scale: 1.02, y: -1 }}
           whileTap={{ scale: 0.98 }}
           className={cn(
-            "flex items-center gap-2.5 px-7 py-3 rounded-xl",
+            "flex items-center justify-center gap-2 sm:gap-2.5 px-5 sm:px-7 py-3 rounded-xl",
             "bg-gradient-to-r from-indigo-600 to-violet-600",
-            "text-white text-sm font-semibold tracking-wide",
+            "text-white text-xs sm:text-sm font-semibold tracking-wide",
             "shadow-lg shadow-indigo-400/25",
             "hover:shadow-xl hover:shadow-indigo-400/35 transition-shadow",
           )}

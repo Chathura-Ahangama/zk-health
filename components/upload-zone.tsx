@@ -73,8 +73,7 @@ export function UploadZone({ onUpload, error }: UploadZoneProps) {
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       className="w-full max-w-2xl mx-auto"
     >
-      <GlassCard glow="indigo" padding="lg">
-        {/* Drop zone */}
+      <GlassCard glow="indigo" padding="md" className="sm:p-8">
         <div
           onDragOver={(e) => {
             e.preventDefault();
@@ -85,7 +84,7 @@ export function UploadZone({ onUpload, error }: UploadZoneProps) {
           onClick={() => inputRef.current?.click()}
           className={cn(
             "relative cursor-pointer rounded-xl border-2 border-dashed transition-all duration-300",
-            "flex flex-col items-center justify-center gap-4 py-16 px-8",
+            "flex flex-col items-center justify-center gap-3 sm:gap-4 py-10 sm:py-16 px-4 sm:px-8",
             isDragOver
               ? "border-indigo-400 bg-indigo-50/60 scale-[1.01]"
               : "border-slate-200/80 hover:border-indigo-300 hover:bg-indigo-50/30",
@@ -99,10 +98,9 @@ export function UploadZone({ onUpload, error }: UploadZoneProps) {
             className="hidden"
           />
 
-          {/* Icon */}
           <motion.div
             className={cn(
-              "flex items-center justify-center w-16 h-16 rounded-2xl transition-colors duration-300",
+              "flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-2xl transition-colors duration-300",
               isDragOver
                 ? "bg-indigo-100 text-indigo-600"
                 : "bg-slate-100 text-slate-400",
@@ -115,44 +113,39 @@ export function UploadZone({ onUpload, error }: UploadZoneProps) {
             transition={{ duration: 0.6 }}
           >
             {isDragOver ? (
-              <FileJson className="w-7 h-7" />
+              <FileJson className="w-6 h-6 sm:w-7 sm:h-7" />
             ) : (
-              <Upload className="w-7 h-7" />
+              <Upload className="w-6 h-6 sm:w-7 sm:h-7" />
             )}
           </motion.div>
 
-          {/* Text */}
           <div className="text-center">
             <p className="text-sm font-semibold text-slate-700">
               {isDragOver ? "Release to upload" : "Drop your medical report"}
             </p>
             <p className="mt-1 text-xs text-slate-400">
-              JSON format • Lab results, diagnostics, health records
+              JSON format • Lab results & diagnostics
             </p>
           </div>
 
-          {/* Browse button */}
-          <div className="flex items-center gap-2 mt-2">
-            <span className="px-4 py-2 text-xs font-semibold text-indigo-600 bg-indigo-50 rounded-lg border border-indigo-200/60 hover:bg-indigo-100 transition-colors">
-              Browse Files
-            </span>
-          </div>
+          <span className="px-4 py-2 text-xs font-semibold text-indigo-600 bg-indigo-50 rounded-lg border border-indigo-200/60 hover:bg-indigo-100 transition-colors">
+            Browse Files
+          </span>
 
-          {/* Corner decorations */}
-          <div className="absolute top-3 left-3 w-4 h-4 border-t-2 border-l-2 border-indigo-200/60 rounded-tl-md" />
-          <div className="absolute top-3 right-3 w-4 h-4 border-t-2 border-r-2 border-indigo-200/60 rounded-tr-md" />
-          <div className="absolute bottom-3 left-3 w-4 h-4 border-b-2 border-l-2 border-indigo-200/60 rounded-bl-md" />
-          <div className="absolute bottom-3 right-3 w-4 h-4 border-b-2 border-r-2 border-indigo-200/60 rounded-br-md" />
+          {/* Corner decorations — hidden on mobile */}
+          <div className="hidden sm:block absolute top-3 left-3 w-4 h-4 border-t-2 border-l-2 border-indigo-200/60 rounded-tl-md" />
+          <div className="hidden sm:block absolute top-3 right-3 w-4 h-4 border-t-2 border-r-2 border-indigo-200/60 rounded-tr-md" />
+          <div className="hidden sm:block absolute bottom-3 left-3 w-4 h-4 border-b-2 border-l-2 border-indigo-200/60 rounded-bl-md" />
+          <div className="hidden sm:block absolute bottom-3 right-3 w-4 h-4 border-b-2 border-r-2 border-indigo-200/60 rounded-br-md" />
         </div>
 
-        {/* Error */}
         <AnimatePresence>
           {error && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
-              className="mt-4 flex items-center gap-2 px-4 py-3 rounded-lg bg-red-50 border border-red-200/60 text-red-700 text-sm"
+              className="mt-4 flex items-center gap-2 px-3 sm:px-4 py-3 rounded-lg bg-red-50 border border-red-200/60 text-red-700 text-xs sm:text-sm"
             >
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               {error}
@@ -160,8 +153,7 @@ export function UploadZone({ onUpload, error }: UploadZoneProps) {
           )}
         </AnimatePresence>
 
-        {/* Sample download */}
-        <div className="mt-6 flex items-center justify-center">
+        <div className="mt-5 sm:mt-6 flex items-center justify-center">
           <button
             onClick={(e) => {
               e.stopPropagation();

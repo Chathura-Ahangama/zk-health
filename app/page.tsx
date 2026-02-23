@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ScanLine } from "lucide-react";
 import { useZKP } from "@/hooks/use-zkp";
@@ -19,13 +19,27 @@ import { publishStatusUpdate } from "@/lib/claim-sync";
 export default function Dashboard() {
   const zkp = useZKP();
   const [showClaimBuilder, setShowClaimBuilder] = useState(false);
+  const claimBuilderRef = useRef<HTMLDivElement>(null);
 
   const handleReset = () => {
     zkp.reset();
     setShowClaimBuilder(false);
   };
 
-  // When claim is shared, publish initial statuses for sync
+  // Auto-scroll to claim builder when it appears
+  useEffect(() => {
+    if (showClaimBuilder && claimBuilderRef.current) {
+      // Wait for the animation to start, then scroll
+      const timeout = setTimeout(() => {
+        claimBuilderRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 150);
+      return () => clearTimeout(timeout);
+    }
+  }, [showClaimBuilder]);
+
   const handleClaimShared = () => {
     if (zkp.claimBundle) {
       publishStatusUpdate({
@@ -33,14 +47,11 @@ export default function Dashboard() {
         status: "proof_generated",
         timestamp: zkp.claimBundle.createdAt,
       });
-
       publishStatusUpdate({
         claimId: zkp.claimBundle.claimId,
         status: "claim_submitted",
         timestamp: Date.now(),
       });
-
-      // Small delay then set to under_review
       setTimeout(() => {
         if (zkp.claimBundle) {
           publishStatusUpdate({
@@ -51,7 +62,6 @@ export default function Dashboard() {
         }
       }, 800);
     }
-
     zkp.markShared();
   };
 
@@ -60,7 +70,7 @@ export default function Dashboard() {
       <DashboardHeader state={zkp.state} onReset={handleReset} />
       <StatusTimeline state={zkp.state} />
 
-      <main className="flex-1 flex flex-col items-center px-4 sm:px-6 py-8 lg:py-12">
+      <main className="flex-1 flex flex-col items-center px-3 sm:px-6 py-6 sm:py-8 lg:py-12">
         <AnimatePresence mode="wait">
           {/* IDLE */}
           {zkp.state === "IDLE" && (
@@ -90,7 +100,7 @@ export default function Dashboard() {
             <CircuitVisualizer key="circuit" progress={zkp.progress} />
           )}
 
-          {/* PROOF GENERATED — single wrapper */}
+          {/* PROOF GENERATED */}
           {zkp.state === "PROOF_GENERATED" && zkp.proof && (
             <div
               key="proof-and-claim"
@@ -104,10 +114,10 @@ export default function Dashboard() {
                 progress={zkp.progress}
               />
 
-              {/* Only show ClaimBuilder AFTER user clicks the button */}
               <AnimatePresence>
                 {showClaimBuilder && (
                   <motion.div
+                    ref={claimBuilderRef}
                     key="claim-builder"
                     initial={{ opacity: 0, y: 40, scale: 0.97 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -116,7 +126,7 @@ export default function Dashboard() {
                       duration: 0.6,
                       ease: [0.22, 1, 0.36, 1],
                     }}
-                    className="w-full mt-10"
+                    className="w-full mt-8 sm:mt-10 scroll-mt-6"
                   >
                     <ClaimBuilder proof={zkp.proof} onSubmit={zkp.buildClaim} />
                   </motion.div>
@@ -125,7 +135,7 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* CLAIM READY — Share */}
+          {/* CLAIM READY */}
           {zkp.state === "CLAIM_READY" && zkp.claimBundle && (
             <ProofShare
               key="share"
@@ -134,20 +144,19 @@ export default function Dashboard() {
             />
           )}
 
-          {/* SHARED — Live Status Tracker */}
+          {/* SHARED */}
           {zkp.state === "SHARED" && zkp.claimBundle && (
             <ClaimStatus key="status" bundle={zkp.claimBundle} />
           )}
         </AnimatePresence>
 
-        {/* Floating error toast */}
         <AnimatePresence>
           {zkp.error && zkp.state !== "IDLE" && (
             <motion.div
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 50 }}
-              className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl bg-red-600 text-white text-sm font-medium shadow-2xl"
+              className="fixed bottom-4 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-50 px-5 py-3 rounded-xl bg-red-600 text-white text-sm font-medium shadow-2xl text-center"
             >
               {zkp.error}
             </motion.div>
@@ -155,7 +164,7 @@ export default function Dashboard() {
         </AnimatePresence>
       </main>
 
-      <footer className="px-6 py-4 text-center">
+      <footer className="px-4 py-4 text-center">
         <p className="text-[10px] text-slate-400 tracking-wide">
           All proofs are generated locally. No medical data leaves your device.
         </p>
@@ -175,11 +184,11 @@ function ScanningView({ progress }: { progress: number }) {
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       className="w-full max-w-lg mx-auto"
     >
-      <GlassCard glow="indigo" padding="lg">
-        <div className="flex flex-col items-center gap-6">
+      <GlassCard glow="indigo" padding="md" className="sm:p-8">
+        <div className="flex flex-col items-center gap-5 sm:gap-6">
           <div className="relative">
             <motion.div
-              className="w-20 h-20 rounded-2xl bg-indigo-50 border border-indigo-200/40 flex items-center justify-center overflow-hidden"
+              className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-indigo-50 border border-indigo-200/40 flex items-center justify-center overflow-hidden"
               animate={{
                 borderColor: [
                   "rgba(199,210,254,0.4)",
@@ -189,7 +198,7 @@ function ScanningView({ progress }: { progress: number }) {
               }}
               transition={{ duration: 2, repeat: Infinity }}
             >
-              <ScanLine className="w-8 h-8 text-indigo-500" />
+              <ScanLine className="w-6 h-6 sm:w-8 sm:h-8 text-indigo-500" />
               <motion.div
                 className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-indigo-500 to-transparent"
                 animate={{ top: ["-2%", "102%"] }}
@@ -251,7 +260,7 @@ function ScanningView({ progress }: { progress: number }) {
                     {field}
                   </span>
                   <motion.div
-                    className="w-16 h-3 rounded bg-indigo-100"
+                    className="w-14 sm:w-16 h-3 rounded bg-indigo-100"
                     animate={{ opacity: [0.4, 1, 0.4] }}
                     transition={{
                       duration: 1.5,

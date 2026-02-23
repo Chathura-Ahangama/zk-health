@@ -90,9 +90,7 @@ export interface GeneratedProof {
 export async function initializeCircuit(
   _artifacts?: CircuitArtifacts,
 ): Promise<void> {
-  console.log("[ZKP Engine] Initializing circuit (simulated)...");
   await new Promise((resolve) => setTimeout(resolve, 800));
-  console.log("[ZKP Engine] Circuit ready.");
 }
 
 /**
@@ -119,8 +117,6 @@ export async function initializeCircuit(
 export async function generateWitness(
   inputs: WitnessInput,
 ): Promise<Record<string, unknown>> {
-  console.log("[ZKP Engine] Generating witness with inputs:", inputs);
-
   // Simulate witness computation
   await new Promise((resolve) => setTimeout(resolve, 2000));
 
@@ -134,7 +130,6 @@ export async function generateWitness(
     _gateCount: 2048 + Math.floor(Math.random() * 512),
   };
 
-  console.log("[ZKP Engine] Witness generated successfully.");
   return witness;
 }
 
@@ -167,8 +162,6 @@ export async function generateWitness(
 export async function generateProof(
   witness: Record<string, unknown>,
 ): Promise<GeneratedProof> {
-  console.log("[ZKP Engine] Generating proof from witness...");
-
   // Simulate proof generation (3-5 seconds)
   const duration = 3000 + Math.random() * 2000;
   await new Promise((resolve) => setTimeout(resolve, duration));
@@ -190,10 +183,6 @@ export async function generateProof(
     ],
   };
 
-  console.log(
-    "[ZKP Engine] Proof generated:",
-    proof.proof.slice(0, 20) + "...",
-  );
   return proof;
 }
 
@@ -222,15 +211,13 @@ export async function verifyProof(
   _proof: GeneratedProof,
   _verificationKey?: string,
 ): Promise<boolean> {
-  console.log("[ZKP Engine] Verifying proof on-chain (simulated)...");
-
   // Verification is typically fast (<1 second)
   await new Promise((resolve) => setTimeout(resolve, 1500));
 
   // In production, this performs a cryptographic verification
   // that returns true iff the proof is valid for the given
   // public inputs and verification key.
-  console.log("[ZKP Engine] ✓ Proof verified successfully.");
+
   return true;
 }
 

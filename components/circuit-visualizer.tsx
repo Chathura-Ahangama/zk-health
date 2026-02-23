@@ -8,15 +8,6 @@ interface CircuitVisualizerProps {
   progress: number;
 }
 
-interface OrbitalNode {
-  id: number;
-  angle: number;
-  x: number;
-  y: number;
-  label: string;
-  delay: number;
-}
-
 const MATH_SYMBOLS = ["∑", "∫", "∂", "∇", "π", "σ", "λ", "Ω", "≡", "∀"];
 const NODE_LABELS = ["H(x)", "σ(w)", "π(k)", "∑ᵢ", "F(p)", "∂ₙ", "R1CS", "QAP"];
 const RADIUS = 130;
@@ -24,7 +15,7 @@ const CENTER = 180;
 const VIEWBOX = CENTER * 2;
 
 export function CircuitVisualizer({ progress }: CircuitVisualizerProps) {
-  const nodes: OrbitalNode[] = useMemo(
+  const nodes = useMemo(
     () =>
       NODE_LABELS.map((label, i) => {
         const angle = (i / NODE_LABELS.length) * Math.PI * 2 - Math.PI / 2;
@@ -51,10 +42,10 @@ export function CircuitVisualizer({ progress }: CircuitVisualizerProps) {
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
       className="w-full max-w-2xl mx-auto"
     >
-      <GlassCard glow="indigo" padding="lg" className="overflow-hidden">
+      <GlassCard glow="indigo" padding="md" className="sm:p-8 overflow-hidden">
         <div className="relative flex flex-col items-center">
-          {/* Floating math symbols (background) */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {/* Floating math symbols */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none hidden sm:block">
             {MATH_SYMBOLS.map((sym, i) => (
               <motion.span
                 key={i}
@@ -66,7 +57,6 @@ export function CircuitVisualizer({ progress }: CircuitVisualizerProps) {
                 animate={{
                   y: [0, -20, 0],
                   opacity: [0.2, 0.5, 0.2],
-                  rotate: [0, 10, -10, 0],
                 }}
                 transition={{
                   duration: 4 + i * 0.5,
@@ -80,14 +70,13 @@ export function CircuitVisualizer({ progress }: CircuitVisualizerProps) {
             ))}
           </div>
 
-          {/* Main SVG Circuit */}
-          <div className="relative w-[360px] h-[360px]">
+          {/* Main SVG — responsive size */}
+          <div className="relative w-[280px] h-[280px] sm:w-[360px] sm:h-[360px]">
             <svg
               viewBox={`0 0 ${VIEWBOX} ${VIEWBOX}`}
               className="w-full h-full"
               fill="none"
             >
-              {/* Outer progress ring (track) */}
               <circle
                 cx={CENTER}
                 cy={CENTER}
@@ -96,8 +85,6 @@ export function CircuitVisualizer({ progress }: CircuitVisualizerProps) {
                 strokeWidth="3"
                 opacity="0.5"
               />
-
-              {/* Outer progress ring (fill) */}
               <motion.circle
                 cx={CENTER}
                 cy={CENTER}
@@ -112,8 +99,6 @@ export function CircuitVisualizer({ progress }: CircuitVisualizerProps) {
                 animate={{ strokeDashoffset: strokeOffset }}
                 transition={{ duration: 0.5, ease: "easeOut" }}
               />
-
-              {/* Inner orbital ring */}
               <motion.circle
                 cx={CENTER}
                 cy={CENTER}
@@ -123,15 +108,9 @@ export function CircuitVisualizer({ progress }: CircuitVisualizerProps) {
                 strokeDasharray="6 6"
                 opacity="0.4"
                 animate={{ rotate: 360 }}
-                transition={{
-                  duration: 30,
-                  repeat: Infinity,
-                  ease: "linear",
-                }}
+                transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
                 style={{ transformOrigin: `${CENTER}px ${CENTER}px` }}
               />
-
-              {/* Secondary ring */}
               <motion.circle
                 cx={CENTER}
                 cy={CENTER}
@@ -141,15 +120,10 @@ export function CircuitVisualizer({ progress }: CircuitVisualizerProps) {
                 strokeDasharray="4 8"
                 opacity="0.3"
                 animate={{ rotate: -360 }}
-                transition={{
-                  duration: 20,
-                  repeat: Infinity,
-                  ease: "linear",
-                }}
+                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
                 style={{ transformOrigin: `${CENTER}px ${CENTER}px` }}
               />
 
-              {/* Connection lines from center to nodes */}
               {nodes.map((node) => (
                 <motion.line
                   key={`line-${node.id}`}
@@ -181,7 +155,6 @@ export function CircuitVisualizer({ progress }: CircuitVisualizerProps) {
                 />
               ))}
 
-              {/* Cross-connections between adjacent nodes */}
               {nodes.map((node, i) => {
                 const next = nodes[(i + 1) % nodes.length];
                 return (
@@ -204,7 +177,6 @@ export function CircuitVisualizer({ progress }: CircuitVisualizerProps) {
                 );
               })}
 
-              {/* Data flow particles along connections */}
               {nodes.map((node) => (
                 <motion.circle
                   key={`particle-${node.id}`}
@@ -225,7 +197,6 @@ export function CircuitVisualizer({ progress }: CircuitVisualizerProps) {
                 />
               ))}
 
-              {/* Gradient definitions */}
               <defs>
                 <linearGradient
                   id="progressGradient"
@@ -242,12 +213,10 @@ export function CircuitVisualizer({ progress }: CircuitVisualizerProps) {
                   <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
                 </radialGradient>
               </defs>
-
-              {/* Center glow */}
               <circle cx={CENTER} cy={CENTER} r="50" fill="url(#centerGlow)" />
             </svg>
 
-            {/* Node labels (HTML overlay for better text rendering) */}
+            {/* Node labels */}
             {nodes.map((node) => (
               <motion.div
                 key={`label-${node.id}`}
@@ -258,10 +227,7 @@ export function CircuitVisualizer({ progress }: CircuitVisualizerProps) {
                   transform: "translate(-50%, -50%)",
                 }}
                 initial={{ opacity: 0, scale: 0 }}
-                animate={{
-                  opacity: 1,
-                  scale: [0.85, 1, 0.85],
-                }}
+                animate={{ opacity: 1, scale: [0.85, 1, 0.85] }}
                 transition={{
                   opacity: { delay: node.delay, duration: 0.4 },
                   scale: {
@@ -272,18 +238,18 @@ export function CircuitVisualizer({ progress }: CircuitVisualizerProps) {
                   },
                 }}
               >
-                <div className="flex items-center justify-center min-w-[44px] h-[28px] px-2 rounded-lg bg-white/90 backdrop-blur-md border-[0.5px] border-indigo-200/50 shadow-sm">
-                  <span className="text-[10px] font-mono font-semibold text-indigo-600 whitespace-nowrap">
+                <div className="flex items-center justify-center min-w-[36px] sm:min-w-[44px] h-[24px] sm:h-[28px] px-1.5 sm:px-2 rounded-lg bg-white/90 backdrop-blur-md border-[0.5px] border-indigo-200/50 shadow-sm">
+                  <span className="text-[8px] sm:text-[10px] font-mono font-semibold text-indigo-600 whitespace-nowrap">
                     {node.label}
                   </span>
                 </div>
               </motion.div>
             ))}
 
-            {/* Center node (HTML) */}
+            {/* Center ZK badge */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
               <motion.div
-                className="flex flex-col items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 shadow-xl shadow-indigo-400/30"
+                className="flex flex-col items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 shadow-xl shadow-indigo-400/30"
                 animate={{
                   scale: [1, 1.06, 1],
                   boxShadow: [
@@ -298,10 +264,10 @@ export function CircuitVisualizer({ progress }: CircuitVisualizerProps) {
                   ease: "easeInOut",
                 }}
               >
-                <span className="text-white font-bold text-lg tracking-tight">
+                <span className="text-white font-bold text-base sm:text-lg tracking-tight">
                   ZK
                 </span>
-                <span className="text-indigo-200 text-[9px] font-medium mt-0.5">
+                <span className="text-indigo-200 text-[8px] sm:text-[9px] font-medium mt-0.5">
                   PROVING
                 </span>
               </motion.div>
@@ -309,9 +275,8 @@ export function CircuitVisualizer({ progress }: CircuitVisualizerProps) {
           </div>
 
           {/* Progress info */}
-          <div className="mt-6 text-center space-y-2">
-            {/* Progress bar */}
-            <div className="w-64 mx-auto h-1.5 bg-slate-100 rounded-full overflow-hidden">
+          <div className="mt-4 sm:mt-6 text-center space-y-2">
+            <div className="w-48 sm:w-64 mx-auto h-1.5 bg-slate-100 rounded-full overflow-hidden">
               <motion.div
                 className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full"
                 initial={{ width: "0%" }}
@@ -319,23 +284,21 @@ export function CircuitVisualizer({ progress }: CircuitVisualizerProps) {
                 transition={{ duration: 0.3, ease: "easeOut" }}
               />
             </div>
-
             <div className="flex items-center justify-center gap-2">
               <motion.div
                 className="w-1.5 h-1.5 rounded-full bg-indigo-500"
                 animate={{ opacity: [1, 0.3, 1] }}
                 transition={{ duration: 1, repeat: Infinity }}
               />
-              <p className="text-xs text-slate-500 font-medium">
-                Computing mathematical proof...{" "}
+              <p className="text-[11px] sm:text-xs text-slate-500 font-medium">
+                Computing proof...{" "}
                 <span className="font-mono text-indigo-600">
                   {Math.round(progress)}%
                 </span>
               </p>
             </div>
-
-            <p className="text-[10px] text-slate-400 font-mono">
-              Constraint system: R1CS → QAP → Groth16
+            <p className="text-[9px] sm:text-[10px] text-slate-400 font-mono">
+              R1CS → QAP → Groth16
             </p>
           </div>
         </div>
