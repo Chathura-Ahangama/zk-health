@@ -1,171 +1,93 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Upload, FileJson, AlertCircle, Download } from "lucide-react";
-import { GlassCard } from "./glass-card";
+import { motion } from "framer-motion";
+import { Upload, ScanLine, Database, Cpu, FileCheck, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { ZKPState } from "@/hooks/use-zkp";
 
-interface UploadZoneProps {
-  onUpload: (file: File) => void;
-  error?: string | null;
+interface Step {
+  id: ZKPState[];
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
 }
 
-const sampleData = {
-  patientId: "MED-2024-7829",
-  sugar: 142,
-  cholesterol: 185,
-  bloodPressure: { systolic: 128, diastolic: 82 },
-  hemoglobin: 14.2,
-  creatinine: 0.9,
-  timestamp: "2024-01-15T10:30:00Z",
-  labName: "Metro Diagnostics Lab",
-};
+const steps: Step[] = [
+  { id: ["IDLE"], label: "Upload", icon: Upload },
+  { id: ["GENERATING_WITNESS"], label: "Scan", icon: ScanLine },
+  { id: ["WITNESS_READY"], label: "Extract", icon: Database },
+  { id: ["PROVING"], label: "Prove", icon: Cpu },
+  { id: ["PROOF_GENERATED"], label: "Claim", icon: FileCheck },
+  { id: ["CLAIM_READY", "SHARED"], label: "Share", icon: Send },
+];
 
-export function UploadZone({ onUpload, error }: UploadZoneProps) {
-  const [isDragOver, setIsDragOver] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+function getStepIndex(state: ZKPState): number {
+  return steps.findIndex((s) => s.id.includes(state));
+}
 
-  const handleFile = useCallback(
-    (file: File) => {
-      if (file.type === "application/json" || file.name.endsWith(".json")) {
-        onUpload(file);
-      }
-    },
-    [onUpload],
-  );
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setIsDragOver(false);
-      const file = e.dataTransfer.files?.[0];
-      if (file) handleFile(file);
-    },
-    [handleFile],
-  );
-
-  const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) handleFile(file);
-    },
-    [handleFile],
-  );
-
-  const downloadSample = () => {
-    const blob = new Blob([JSON.stringify(sampleData, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "sample-medical-report.json";
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+export function StatusTimeline({ state }: { state: ZKPState }) {
+  const activeIdx = getStepIndex(state);
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 30, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -20, scale: 0.97 }}
-      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-      className="w-full max-w-2xl mx-auto"
+      className="flex items-center justify-center gap-0 px-3 sm:px-6 py-2 sm:py-3 overflow-x-auto scrollbar-none"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: 0.3 }}
     >
-      <GlassCard glow="indigo" padding="md" className="sm:p-8">
-        <div
-          onDragOver={(e) => {
-            e.preventDefault();
-            setIsDragOver(true);
-          }}
-          onDragLeave={() => setIsDragOver(false)}
-          onDrop={handleDrop}
-          onClick={() => inputRef.current?.click()}
-          className={cn(
-            "relative cursor-pointer rounded-xl border-2 border-dashed transition-all duration-300",
-            "flex flex-col items-center justify-center gap-3 sm:gap-4 py-10 sm:py-16 px-4 sm:px-8",
-            isDragOver
-              ? "border-indigo-400 bg-indigo-50/60 scale-[1.01]"
-              : "border-slate-200/80 hover:border-indigo-300 hover:bg-indigo-50/30",
-          )}
-        >
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".json,application/json"
-            onChange={handleChange}
-            className="hidden"
-          />
+      {steps.map((step, idx) => {
+        const isActive = idx === activeIdx;
+        const isComplete = idx < activeIdx;
+        const isFuture = idx > activeIdx;
+        const Icon = step.icon;
 
-          <motion.div
-            className={cn(
-              "flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-2xl transition-colors duration-300",
-              isDragOver
-                ? "bg-indigo-100 text-indigo-600"
-                : "bg-slate-100 text-slate-400",
-            )}
-            animate={
-              isDragOver
-                ? { scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] }
-                : { scale: 1, rotate: 0 }
-            }
-            transition={{ duration: 0.6 }}
-          >
-            {isDragOver ? (
-              <FileJson className="w-6 h-6 sm:w-7 sm:h-7" />
-            ) : (
-              <Upload className="w-6 h-6 sm:w-7 sm:h-7" />
-            )}
-          </motion.div>
+        return (
+          <div key={step.label} className="flex items-center flex-shrink-0">
+            <div className="flex flex-col items-center gap-1 sm:gap-1.5">
+              <motion.div
+                className={cn(
+                  "relative flex items-center justify-center w-7 h-7 sm:w-9 sm:h-9 rounded-full transition-colors duration-500",
+                  isComplete &&
+                    "bg-indigo-600 text-white shadow-md shadow-indigo-300/30",
+                  isActive &&
+                    "bg-indigo-100 text-indigo-700 ring-2 ring-indigo-400/40 ring-offset-1 sm:ring-offset-2 ring-offset-transparent",
+                  isFuture && "bg-slate-100 text-slate-400",
+                )}
+                animate={isActive ? { scale: [1, 1.08, 1] } : { scale: 1 }}
+                transition={
+                  isActive
+                    ? { duration: 2, repeat: Infinity, ease: "easeInOut" }
+                    : {}
+                }
+              >
+                <Icon className="w-3 h-3 sm:w-4 sm:h-4 relative z-10" />
+              </motion.div>
+              <span
+                className={cn(
+                  "text-[8px] sm:text-[10px] font-semibold tracking-wider uppercase",
+                  isComplete && "text-indigo-600",
+                  isActive && "text-indigo-700",
+                  isFuture && "text-slate-400",
+                )}
+              >
+                {step.label}
+              </span>
+            </div>
 
-          <div className="text-center">
-            <p className="text-sm font-semibold text-slate-700">
-              {isDragOver ? "Release to upload" : "Drop your medical report"}
-            </p>
-            <p className="mt-1 text-xs text-slate-400">
-              JSON format • Lab results & diagnostics
-            </p>
+            {idx < steps.length - 1 && (
+              <div className="relative w-6 sm:w-10 h-[2px] mx-0.5 sm:mx-1 -mt-4 sm:-mt-5 overflow-hidden rounded-full bg-slate-200">
+                <motion.div
+                  className="absolute inset-y-0 left-0 bg-indigo-500 rounded-full"
+                  initial={{ width: "0%" }}
+                  animate={{
+                    width: isComplete ? "100%" : isActive ? "50%" : "0%",
+                  }}
+                  transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                />
+              </div>
+            )}
           </div>
-
-          <span className="px-4 py-2 text-xs font-semibold text-indigo-600 bg-indigo-50 rounded-lg border border-indigo-200/60 hover:bg-indigo-100 transition-colors">
-            Browse Files
-          </span>
-
-          {/* Corner decorations — hidden on mobile */}
-          <div className="hidden sm:block absolute top-3 left-3 w-4 h-4 border-t-2 border-l-2 border-indigo-200/60 rounded-tl-md" />
-          <div className="hidden sm:block absolute top-3 right-3 w-4 h-4 border-t-2 border-r-2 border-indigo-200/60 rounded-tr-md" />
-          <div className="hidden sm:block absolute bottom-3 left-3 w-4 h-4 border-b-2 border-l-2 border-indigo-200/60 rounded-bl-md" />
-          <div className="hidden sm:block absolute bottom-3 right-3 w-4 h-4 border-b-2 border-r-2 border-indigo-200/60 rounded-br-md" />
-        </div>
-
-        <AnimatePresence>
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mt-4 flex items-center gap-2 px-3 sm:px-4 py-3 rounded-lg bg-red-50 border border-red-200/60 text-red-700 text-xs sm:text-sm"
-            >
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              {error}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <div className="mt-5 sm:mt-6 flex items-center justify-center">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              downloadSample();
-            }}
-            className="flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-indigo-500 transition-colors font-medium"
-          >
-            <Download className="w-3 h-3" />
-            Download sample medical report
-          </button>
-        </div>
-      </GlassCard>
+        );
+      })}
     </motion.div>
   );
 }
