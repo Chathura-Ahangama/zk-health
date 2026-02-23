@@ -12,7 +12,7 @@ import {
   Fingerprint,
   ArrowRight,
   BadgeCheck,
-  Sparkles,
+  FileCheck,
 } from "lucide-react";
 import { GlassCard } from "./glass-card";
 import { cn, formatTimestamp, truncateHash } from "@/lib/utils";
@@ -20,15 +20,17 @@ import type { ZKProof } from "@/hooks/use-zkp";
 
 interface ProofDisplayProps {
   proof: ZKProof;
-  isVerified: boolean;
-  onVerify: () => void;
+  selfVerified: boolean;
+  onSelfVerify: () => void;
+  onBuildClaim: () => void;
   progress: number;
 }
 
 export function ProofDisplay({
   proof,
-  isVerified,
-  onVerify,
+  selfVerified,
+  onSelfVerify,
+  onBuildClaim,
   progress,
 }: ProofDisplayProps) {
   const [copied, setCopied] = useState(false);
@@ -47,84 +49,44 @@ export function ProofDisplay({
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
       className="w-full max-w-3xl mx-auto space-y-5"
     >
-      {/* Verified Banner */}
+      {/* Self-verified badge */}
       <AnimatePresence>
-        {isVerified && (
+        {selfVerified && (
           <motion.div
-            initial={{ opacity: 0, height: 0, y: -20 }}
-            animate={{ opacity: 1, height: "auto", y: 0 }}
-            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            className="overflow-hidden"
           >
             <GlassCard
               glow="emerald"
-              padding="md"
+              padding="sm"
               className="bg-emerald-50/40 border-emerald-200/40"
             >
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
                 <motion.div
-                  className="flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 shadow-lg shadow-emerald-300/30"
                   initial={{ scale: 0, rotate: -180 }}
                   animate={{ scale: 1, rotate: 0 }}
-                  transition={{
-                    type: "spring",
-                    stiffness: 200,
-                    damping: 15,
-                    delay: 0.2,
-                  }}
+                  transition={{ type: "spring", stiffness: 200 }}
+                  className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 shadow-md shadow-emerald-300/30"
                 >
-                  <BadgeCheck className="w-7 h-7 text-white" />
+                  <BadgeCheck className="w-5 h-5 text-white" />
                 </motion.div>
-
-                <div className="flex-1">
-                  <motion.div
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.4 }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-bold text-emerald-800">
-                        Mathematically Verified
-                      </h3>
-                      <motion.div
-                        animate={{ rotate: [0, 15, -15, 0] }}
-                        transition={{
-                          duration: 2,
-                          repeat: Infinity,
-                          repeatDelay: 3,
-                        }}
-                      >
-                        <Sparkles className="w-5 h-5 text-emerald-500" />
-                      </motion.div>
-                    </div>
-                    <p className="text-sm text-emerald-600 mt-0.5">
-                      The proof has been verified against the verification key.
-                      No private data was revealed.
-                    </p>
-                  </motion.div>
+                <div>
+                  <h3 className="text-sm font-bold text-emerald-800">
+                    Self-Verified ✓
+                  </h3>
+                  <p className="text-xs text-emerald-600">
+                    Proof is valid. Ready to attach to an insurance claim.
+                  </p>
                 </div>
-
-                <motion.div
-                  className="px-3 py-1.5 rounded-full bg-emerald-100 border border-emerald-200/60"
-                  initial={{ opacity: 0, scale: 0 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.6, type: "spring" }}
-                >
-                  <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
-                    Valid
-                  </span>
-                </motion.div>
               </div>
             </GlassCard>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Proof Hash */}
-      <GlassCard
-        glow={isVerified ? "emerald" : "indigo"}
-        padding="md"
-        className={cn(isVerified && "proof-glow")}
-      >
+      {/* Proof hash */}
+      <GlassCard glow="indigo" padding="md">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Fingerprint className="w-4 h-4 text-indigo-500" />
@@ -143,35 +105,23 @@ export function ProofDisplay({
           </button>
         </div>
 
-        {/* Hash display */}
         <motion.div
-          className={cn(
-            "relative p-4 rounded-xl font-mono text-xs leading-relaxed break-all",
-            "bg-slate-900 text-indigo-300",
-            "border border-slate-700/50",
-            "overflow-hidden",
-          )}
+          className="relative p-4 rounded-xl font-mono text-xs leading-relaxed break-all bg-slate-900 text-indigo-300 border border-slate-700/50 overflow-hidden"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
         >
-          {/* Subtle scan line effect */}
           <motion.div
             className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-400/30 to-transparent"
             animate={{ top: ["0%", "100%"] }}
-            transition={{
-              duration: 4,
-              repeat: Infinity,
-              ease: "linear",
-            }}
+            transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
           />
-
           <span className="text-slate-500">proof: </span>
           <span className="text-indigo-300">{proof.proofHash}</span>
         </motion.div>
       </GlassCard>
 
-      {/* Proof Metadata */}
+      {/* Metadata grid */}
       <div className="grid grid-cols-3 gap-3">
         {[
           {
@@ -232,7 +182,7 @@ export function ProofDisplay({
       {/* Public Inputs */}
       <GlassCard padding="md">
         <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
-          Public Inputs
+          Public Inputs (visible to insurer)
         </h4>
         <div className="space-y-2">
           {proof.publicInputs.map((input, idx) => (
@@ -252,46 +202,31 @@ export function ProofDisplay({
         </div>
       </GlassCard>
 
-      {/* Verification Key */}
-      <GlassCard padding="sm">
-        <div className="flex items-center gap-2 mb-2">
-          <ShieldCheck className="w-3.5 h-3.5 text-slate-400" />
-          <h4 className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-            Verification Key
-          </h4>
-        </div>
-        <code className="text-[11px] font-mono text-slate-500 break-all leading-relaxed">
-          {truncateHash(proof.verificationKey, 16)}
-        </code>
-      </GlassCard>
-
-      {/* Verify Button */}
-      {!isVerified && (
-        <motion.div
-          className="flex justify-center pt-2"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
-        >
+      {/* Action buttons */}
+      <motion.div
+        className="flex items-center justify-center gap-3 pt-2"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.6 }}
+      >
+        {/* Self-verify */}
+        {!selfVerified && (
           <motion.button
-            onClick={onVerify}
-            whileHover={{ scale: 1.02, y: -1 }}
+            onClick={onSelfVerify}
+            whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             disabled={progress > 0}
             className={cn(
-              "relative flex items-center gap-2.5 px-8 py-3.5 rounded-xl",
-              "bg-gradient-to-r from-emerald-600 to-teal-600",
-              "text-white text-sm font-semibold tracking-wide",
-              "shadow-lg shadow-emerald-400/25",
-              "hover:shadow-xl hover:shadow-emerald-400/35 transition-shadow",
-              "disabled:opacity-60 disabled:cursor-not-allowed",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2",
+              "flex items-center gap-2 px-5 py-3 rounded-xl",
+              "bg-white border border-slate-200 text-sm font-semibold text-slate-700",
+              "hover:border-indigo-300 hover:bg-indigo-50/50 transition-all",
+              "disabled:opacity-50 disabled:cursor-not-allowed",
             )}
           >
             {progress > 0 ? (
               <>
                 <motion.div
-                  className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
+                  className="w-4 h-4 border-2 border-slate-300 border-t-indigo-500 rounded-full"
                   animate={{ rotate: 360 }}
                   transition={{
                     duration: 0.8,
@@ -303,13 +238,31 @@ export function ProofDisplay({
               </>
             ) : (
               <>
-                Verify Proof
-                <ArrowRight className="w-4 h-4" />
+                <ShieldCheck className="w-4 h-4" />
+                Self-Verify
               </>
             )}
           </motion.button>
-        </motion.div>
-      )}
+        )}
+
+        {/* Build claim */}
+        <motion.button
+          onClick={onBuildClaim}
+          whileHover={{ scale: 1.02, y: -1 }}
+          whileTap={{ scale: 0.98 }}
+          className={cn(
+            "flex items-center gap-2.5 px-7 py-3 rounded-xl",
+            "bg-gradient-to-r from-indigo-600 to-violet-600",
+            "text-white text-sm font-semibold tracking-wide",
+            "shadow-lg shadow-indigo-400/25",
+            "hover:shadow-xl hover:shadow-indigo-400/35 transition-shadow",
+          )}
+        >
+          <FileCheck className="w-4 h-4" />
+          Prepare Insurance Claim
+          <ArrowRight className="w-4 h-4" />
+        </motion.button>
+      </motion.div>
     </motion.div>
   );
 }

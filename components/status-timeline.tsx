@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Upload, ScanLine, Database, Cpu, BadgeCheck } from "lucide-react";
+import { Upload, ScanLine, Database, Cpu, FileCheck, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ZKPState } from "@/hooks/use-zkp";
 
@@ -16,16 +16,8 @@ const steps: Step[] = [
   { id: ["GENERATING_WITNESS"], label: "Scan", icon: ScanLine },
   { id: ["WITNESS_READY"], label: "Extract", icon: Database },
   { id: ["PROVING"], label: "Prove", icon: Cpu },
-  { id: ["PROOF_GENERATED", "VERIFIED"], label: "Verify", icon: BadgeCheck },
-];
-
-const stateOrder: ZKPState[] = [
-  "IDLE",
-  "GENERATING_WITNESS",
-  "WITNESS_READY",
-  "PROVING",
-  "PROOF_GENERATED",
-  "VERIFIED",
+  { id: ["PROOF_GENERATED"], label: "Claim", icon: FileCheck },
+  { id: ["CLAIM_READY", "SHARED"], label: "Share", icon: Send },
 ];
 
 function getStepIndex(state: ZKPState): number {
@@ -50,7 +42,6 @@ export function StatusTimeline({ state }: { state: ZKPState }) {
 
         return (
           <div key={step.label} className="flex items-center">
-            {/* Node */}
             <div className="flex flex-col items-center gap-1.5">
               <motion.div
                 className={cn(
@@ -68,18 +59,7 @@ export function StatusTimeline({ state }: { state: ZKPState }) {
                     : {}
                 }
               >
-                <Icon className="w-4 h-4" />
-                {isComplete && (
-                  <motion.div
-                    className="absolute inset-0 rounded-full bg-indigo-600"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: "spring", stiffness: 300 }}
-                  />
-                )}
-                {isComplete && (
-                  <Icon className="relative z-10 w-4 h-4 text-white" />
-                )}
+                <Icon className="w-4 h-4 relative z-10" />
               </motion.div>
               <span
                 className={cn(
@@ -93,9 +73,8 @@ export function StatusTimeline({ state }: { state: ZKPState }) {
               </span>
             </div>
 
-            {/* Connector */}
             {idx < steps.length - 1 && (
-              <div className="relative w-12 h-[2px] mx-1 -mt-5 overflow-hidden rounded-full bg-slate-200">
+              <div className="relative w-10 h-[2px] mx-1 -mt-5 overflow-hidden rounded-full bg-slate-200">
                 <motion.div
                   className="absolute inset-y-0 left-0 bg-indigo-500 rounded-full"
                   initial={{ width: "0%" }}

@@ -10,6 +10,12 @@ import {
   type GeneratedProof,
   type WitnessInput,
 } from "@/lib/zkp-engine";
+import {
+  buildClaimBundle,
+  serializeBundle,
+  type ClaimBundle,
+  type ClaimDetails,
+} from "@/lib/claim-engine";
 
 /* ── State Machine ────────────────────────────────────────── */
 
@@ -19,7 +25,8 @@ export type ZKPState =
   | "WITNESS_READY"
   | "PROVING"
   | "PROOF_GENERATED"
-  | "VERIFIED";
+  | "CLAIM_READY"
+  | "SHARED";
 
 /* ── Data Types ───────────────────────────────────────────── */
 
@@ -66,7 +73,8 @@ export function useZKP() {
   const [state, setState] = useState<ZKPState>("IDLE");
   const [medicalData, setMedicalData] = useState<MedicalData | null>(null);
   const [proof, setProof] = useState<ZKProof | null>(null);
-  const [isVerified, setIsVerified] = useState(false);
+  const [selfVerified, setSelfVerified] = useState(false);
+  const [claimBundle, setClaimBundle] = useState<ClaimBundle | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
 
@@ -86,10 +94,7 @@ export function useZKP() {
   const startProgress = (speed: number, cap: number) => {
     clearProgress();
     progressRef.current = setInterval(() => {
-      setProgress((prev) => {
-        const next = prev + Math.random() * speed;
-        return Math.min(next, cap);
-      });
+      setProgress((prev) => Math.min(prev + Math.random() * speed, cap));
     }, 250);
   };
 
@@ -101,25 +106,19 @@ export function useZKP() {
       setState("GENERATING_WITNESS");
       setProgress(0);
 
-      // Parse the uploaded JSON
       const text = await file.text();
       let data: MedicalData;
-
       try {
         data = JSON.parse(text) as MedicalData;
       } catch {
-        throw new Error(
-          "Invalid JSON file. Please upload a valid medical report.",
-        );
+        throw new Error("Invalid JSON file.");
       }
 
       setMedicalData(data);
       startProgress(12, 85);
 
-      // Initialize circuit backend
       await initializeCircuit();
 
-      // Build witness inputs
       const witnessInput: WitnessInput = {
         sugar: data.sugar ?? 0,
         cholesterol: data.cholesterol ?? 0,
@@ -135,7 +134,6 @@ export function useZKP() {
 
       clearProgress();
       setProgress(100);
-
       await new Promise((r) => setTimeout(r, 600));
       setState("WITNESS_READY");
       setProgress(0);
@@ -149,25 +147,22 @@ export function useZKP() {
 
   const generateProof = useCallback(async () => {
     if (!witnessRef.current || !medicalData) return;
-
     try {
       setError(null);
       setState("PROVING");
       setProgress(0);
-
       startProgress(6, 92);
-      const t0 = performance.now();
 
+      const t0 = performance.now();
       const generated = await engineGenerateProof(witnessRef.current);
       proofRef.current = generated;
-
       const provingTimeMs = Math.round(performance.now() - t0);
 
       clearProgress();
       setProgress(100);
 
       const zkProof: ZKProof = {
-        proofHash: typeof generated.proof === "string" ? generated.proof : "",
+        proofHash: generated.proof,
         publicInputs: generated.publicSignals,
         verificationKey: generateVerificationKey(),
         timestamp: Date.now(),
@@ -175,7 +170,6 @@ export function useZKP() {
         constraintCount: 2048 + Math.floor(Math.random() * 512),
         provingTimeMs,
       };
-
       setProof(zkProof);
 
       await new Promise((r) => setTimeout(r, 500));
@@ -189,28 +183,19 @@ export function useZKP() {
     }
   }, [medicalData]);
 
-  const verifyProof = useCallback(async () => {
+  const selfVerify = useCallback(async () => {
     if (!proofRef.current || !proof) return;
-
     try {
       setError(null);
       startProgress(18, 90);
-
       const isValid = await engineVerifyProof(
         proofRef.current,
         proof.verificationKey,
       );
-
       clearProgress();
       setProgress(100);
-
-      if (isValid) {
-        setIsVerified(true);
-        setState("VERIFIED");
-      } else {
-        setError("Proof verification failed — invalid proof.");
-      }
-
+      if (isValid) setSelfVerified(true);
+      else setError("Self-verification failed.");
       await new Promise((r) => setTimeout(r, 400));
       setProgress(0);
     } catch (err) {
@@ -220,12 +205,31 @@ export function useZKP() {
     }
   }, [proof]);
 
+  const buildClaim = useCallback(
+    (details: ClaimDetails) => {
+      if (!proof || !medicalData) return;
+      const bundle = buildClaimBundle(
+        proof,
+        details,
+        medicalData.labName ?? "Unknown Lab",
+      );
+      setClaimBundle(bundle);
+      setState("CLAIM_READY");
+    },
+    [proof, medicalData],
+  );
+
+  const markShared = useCallback(() => {
+    setState("SHARED");
+  }, []);
+
   const reset = useCallback(() => {
     clearProgress();
     setState("IDLE");
     setMedicalData(null);
     setProof(null);
-    setIsVerified(false);
+    setSelfVerified(false);
+    setClaimBundle(null);
     setError(null);
     setProgress(0);
     witnessRef.current = null;
@@ -236,12 +240,15 @@ export function useZKP() {
     state,
     medicalData,
     proof,
-    isVerified,
+    selfVerified,
+    claimBundle,
     error,
     progress,
     uploadAndScan,
     generateProof,
-    verifyProof,
+    selfVerify,
+    buildClaim,
+    markShared,
     reset,
   };
 }

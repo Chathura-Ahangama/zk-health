@@ -65,24 +65,6 @@ body::before {
   z-index: 0;
 }
 
-/* Scanning animation keyframes */
-@keyframes scan-line {
-  0% {
-    top: -2px;
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  90% {
-    opacity: 1;
-  }
-  100% {
-    top: calc(100% + 2px);
-    opacity: 0;
-  }
-}
-
 @keyframes glow-pulse {
   0%,
   100% {
@@ -97,28 +79,10 @@ body::before {
   }
 }
 
-@keyframes subtle-float {
-  0%,
-  100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-6px);
-  }
-}
-
-@keyframes dash-flow {
-  to {
-    stroke-dashoffset: -16;
-  }
-}
-
-/* Proof hash glow */
 .proof-glow {
   animation: glow-pulse 3s ease-in-out infinite;
 }
 
-/* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -136,7 +100,6 @@ body::before {
   background: rgba(99, 102, 241, 0.35);
 }
 
-/* Selection color */
 ::selection {
   background: rgba(99, 102, 241, 0.15);
   color: #312e81;

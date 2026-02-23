@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { ScanLine } from "lucide-react";
 import { useZKP } from "@/hooks/use-zkp";
 import { DashboardHeader } from "@/components/dashboard-header";
 import { StatusTimeline } from "@/components/status-timeline";
@@ -8,24 +10,59 @@ import { UploadZone } from "@/components/upload-zone";
 import { DataExtraction } from "@/components/data-extraction";
 import { CircuitVisualizer } from "@/components/circuit-visualizer";
 import { ProofDisplay } from "@/components/proof-display";
+import { ClaimBuilder } from "@/components/claim-builder";
+import { ProofShare } from "@/components/proof-share";
+import { ClaimStatus } from "@/components/claim-status";
 import { GlassCard } from "@/components/glass-card";
-import { ScanLine } from "lucide-react";
+import { publishStatusUpdate } from "@/lib/claim-sync";
 
 export default function Dashboard() {
   const zkp = useZKP();
+  const [showClaimBuilder, setShowClaimBuilder] = useState(false);
+
+  const handleReset = () => {
+    zkp.reset();
+    setShowClaimBuilder(false);
+  };
+
+  // When claim is shared, publish initial statuses for sync
+  const handleClaimShared = () => {
+    if (zkp.claimBundle) {
+      publishStatusUpdate({
+        claimId: zkp.claimBundle.claimId,
+        status: "proof_generated",
+        timestamp: zkp.claimBundle.createdAt,
+      });
+
+      publishStatusUpdate({
+        claimId: zkp.claimBundle.claimId,
+        status: "claim_submitted",
+        timestamp: Date.now(),
+      });
+
+      // Small delay then set to under_review
+      setTimeout(() => {
+        if (zkp.claimBundle) {
+          publishStatusUpdate({
+            claimId: zkp.claimBundle.claimId,
+            status: "under_review",
+            timestamp: Date.now(),
+          });
+        }
+      }, 800);
+    }
+
+    zkp.markShared();
+  };
 
   return (
     <div className="relative min-h-screen flex flex-col">
-      {/* Header */}
-      <DashboardHeader state={zkp.state} onReset={zkp.reset} />
-
-      {/* Timeline */}
+      <DashboardHeader state={zkp.state} onReset={handleReset} />
       <StatusTimeline state={zkp.state} />
 
-      {/* Main Content */}
       <main className="flex-1 flex flex-col items-center px-4 sm:px-6 py-8 lg:py-12">
         <AnimatePresence mode="wait">
-          {/* ── IDLE: Upload ──────────────────────────────── */}
+          {/* IDLE */}
           {zkp.state === "IDLE" && (
             <UploadZone
               key="upload"
@@ -34,12 +71,12 @@ export default function Dashboard() {
             />
           )}
 
-          {/* ── GENERATING_WITNESS: Scanning ──────────────── */}
+          {/* SCANNING */}
           {zkp.state === "GENERATING_WITNESS" && (
             <ScanningView key="scanning" progress={zkp.progress} />
           )}
 
-          {/* ── WITNESS_READY: Data Extraction ────────────── */}
+          {/* WITNESS READY */}
           {zkp.state === "WITNESS_READY" && zkp.medicalData && (
             <DataExtraction
               key="extraction"
@@ -48,25 +85,62 @@ export default function Dashboard() {
             />
           )}
 
-          {/* ── PROVING: Circuit Visualizer ───────────────── */}
+          {/* PROVING */}
           {zkp.state === "PROVING" && (
             <CircuitVisualizer key="circuit" progress={zkp.progress} />
           )}
 
-          {/* ── PROOF_GENERATED / VERIFIED: Results ──────── */}
-          {(zkp.state === "PROOF_GENERATED" || zkp.state === "VERIFIED") &&
-            zkp.proof && (
+          {/* PROOF GENERATED — single wrapper */}
+          {zkp.state === "PROOF_GENERATED" && zkp.proof && (
+            <div
+              key="proof-and-claim"
+              className="w-full flex flex-col items-center"
+            >
               <ProofDisplay
-                key="proof"
                 proof={zkp.proof}
-                isVerified={zkp.isVerified}
-                onVerify={zkp.verifyProof}
+                selfVerified={zkp.selfVerified}
+                onSelfVerify={zkp.selfVerify}
+                onBuildClaim={() => setShowClaimBuilder(true)}
                 progress={zkp.progress}
               />
-            )}
+
+              {/* Only show ClaimBuilder AFTER user clicks the button */}
+              <AnimatePresence>
+                {showClaimBuilder && (
+                  <motion.div
+                    key="claim-builder"
+                    initial={{ opacity: 0, y: 40, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -20, scale: 0.97 }}
+                    transition={{
+                      duration: 0.6,
+                      ease: [0.22, 1, 0.36, 1],
+                    }}
+                    className="w-full mt-10"
+                  >
+                    <ClaimBuilder proof={zkp.proof} onSubmit={zkp.buildClaim} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+
+          {/* CLAIM READY — Share */}
+          {zkp.state === "CLAIM_READY" && zkp.claimBundle && (
+            <ProofShare
+              key="share"
+              bundle={zkp.claimBundle}
+              onShared={handleClaimShared}
+            />
+          )}
+
+          {/* SHARED — Live Status Tracker */}
+          {zkp.state === "SHARED" && zkp.claimBundle && (
+            <ClaimStatus key="status" bundle={zkp.claimBundle} />
+          )}
         </AnimatePresence>
 
-        {/* Error toast (floating) */}
+        {/* Floating error toast */}
         <AnimatePresence>
           {zkp.error && zkp.state !== "IDLE" && (
             <motion.div
@@ -81,18 +155,16 @@ export default function Dashboard() {
         </AnimatePresence>
       </main>
 
-      {/* Footer */}
       <footer className="px-6 py-4 text-center">
         <p className="text-[10px] text-slate-400 tracking-wide">
-          Proofs are generated locally in your browser. No medical data leaves
-          your device.
+          All proofs are generated locally. No medical data leaves your device.
         </p>
       </footer>
     </div>
   );
 }
 
-/* ── Scanning View ────────────────────────────────────────── */
+/* ── Scanning View ──────────────────────────────────────── */
 
 function ScanningView({ progress }: { progress: number }) {
   return (
@@ -105,7 +177,6 @@ function ScanningView({ progress }: { progress: number }) {
     >
       <GlassCard glow="indigo" padding="lg">
         <div className="flex flex-col items-center gap-6">
-          {/* Scanning icon animation */}
           <div className="relative">
             <motion.div
               className="w-20 h-20 rounded-2xl bg-indigo-50 border border-indigo-200/40 flex items-center justify-center overflow-hidden"
@@ -119,13 +190,9 @@ function ScanningView({ progress }: { progress: number }) {
               transition={{ duration: 2, repeat: Infinity }}
             >
               <ScanLine className="w-8 h-8 text-indigo-500" />
-
-              {/* Scanning line */}
               <motion.div
                 className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-indigo-500 to-transparent"
-                animate={{
-                  top: ["-2%", "102%"],
-                }}
+                animate={{ top: ["-2%", "102%"] }}
                 transition={{
                   duration: 1.8,
                   repeat: Infinity,
@@ -133,16 +200,11 @@ function ScanningView({ progress }: { progress: number }) {
                 }}
               />
             </motion.div>
-
-            {/* Pulse rings */}
             {[0, 1, 2].map((i) => (
               <motion.div
                 key={i}
                 className="absolute inset-0 rounded-2xl border border-indigo-300/30"
-                animate={{
-                  scale: [1, 1.5],
-                  opacity: [0.6, 0],
-                }}
+                animate={{ scale: [1, 1.5], opacity: [0.6, 0] }}
                 transition={{
                   duration: 2,
                   repeat: Infinity,
@@ -153,7 +215,6 @@ function ScanningView({ progress }: { progress: number }) {
             ))}
           </div>
 
-          {/* Progress */}
           <div className="w-full space-y-3 text-center">
             <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
               <motion.div
@@ -163,7 +224,6 @@ function ScanningView({ progress }: { progress: number }) {
                 transition={{ duration: 0.3, ease: "easeOut" }}
               />
             </div>
-
             <div>
               <p className="text-sm font-semibold text-slate-700">
                 Scanning Medical Data
@@ -177,7 +237,6 @@ function ScanningView({ progress }: { progress: number }) {
             </div>
           </div>
 
-          {/* Extraction preview */}
           <div className="w-full space-y-1.5">
             {["Patient ID", "Blood Sugar", "Cholesterol", "Blood Pressure"].map(
               (field, i) => (
