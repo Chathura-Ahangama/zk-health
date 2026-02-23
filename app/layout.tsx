@@ -16,7 +16,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MedZK — Privacy-First Medical Verification",
+  title: "MedZK",
   description:
     "Generate and verify zero-knowledge proofs for medical data without revealing sensitive health information.",
   keywords: ["zero-knowledge proof", "medical privacy", "ZKP", "healthcare"],
