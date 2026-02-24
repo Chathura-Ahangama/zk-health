@@ -358,30 +358,6 @@ export function ProofShare({ bundle, onShared }: ProofShareProps) {
         </AnimatePresence>
       </div>
 
-      {/* Verification info */}
-      <GlassCard
-        padding="sm"
-        className="bg-emerald-50/30 border-emerald-200/30"
-      >
-        <div className="flex items-center gap-2.5 sm:gap-3">
-          <Shield className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] sm:text-xs text-emerald-700 font-medium">
-              Insurer can verify by scanning QR, opening the link, or uploading
-              the JSON
-            </p>
-            <Link href="/verify" target="_blank">
-              <code className="text-[10px] sm:text-[11px] font-mono text-emerald-600 bg-emerald-100/60 px-1.5 py-0.5 rounded inline-flex items-center gap-1 mt-0.5">
-                {typeof window !== "undefined"
-                  ? `${window.location.origin}/verify`
-                  : "/verify"}
-                <ExternalLink className="w-2.5 h-2.5" />
-              </code>
-            </Link>
-          </div>
-        </div>
-      </GlassCard>
-
       {/* Mark as shared */}
       <motion.div className="flex justify-center pt-1 sm:pt-2">
         <motion.button
