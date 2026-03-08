@@ -74,6 +74,10 @@ async function getBrowserProvider() {
   return provider;
 }
 
+export function getAddressUrl(address: string) {
+  return `https://sepolia.etherscan.io/address/${address}`;
+}
+
 export async function signBundleAsLab(bundle: ClaimBundle) {
   const provider = await getBrowserProvider();
   const signer = await provider.getSigner();
