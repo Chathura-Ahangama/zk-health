@@ -88,7 +88,7 @@ export function useVerifier() {
       const parsed = deserializeBundle(raw);
       if (!parsed) {
         throw new Error(
-          "Invalid claim bundle format. Expected a MedZK claim JSON.",
+          "Invalid claim bundle format. Expected a zkHealth claim JSON.",
         );
       }
 
@@ -135,7 +135,9 @@ export function useVerifier() {
         passed: !expired,
         detail: expired
           ? "Claim bundle has expired"
-          : `Valid for ${Math.ceil((bundle.expiresAt - Date.now()) / 86400000)} more days`,
+          : `Valid for ${Math.ceil(
+              (bundle.expiresAt - Date.now()) / 86400000,
+            )} more days`,
       });
 
       await new Promise((r) => setTimeout(r, 400));
@@ -146,7 +148,7 @@ export function useVerifier() {
       });
 
       const proofData: GeneratedProof = {
-        proof: new Uint8Array(Buffer.from(bundle.proof.hash, 'hex')),
+        proof: new Uint8Array(Buffer.from(bundle.proof.hash, "hex")),
         publicSignals: bundle.proof.publicInputs,
       };
       const cryptoValid = await engineVerifyProof(

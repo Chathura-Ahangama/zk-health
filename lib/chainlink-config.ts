@@ -1,5 +1,5 @@
 /**
- * Chainlink configuration for MedZK
+ * Chainlink configuration for zkHealth
  *
  * NETWORKS:
  *   - Sepolia (testnet) — for hackathon demo

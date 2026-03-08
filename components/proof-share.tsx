@@ -71,12 +71,12 @@ export function ProofShare({ bundle, onShared }: ProofShareProps) {
   };
 
   const downloadBundle = () => {
-    downloadJSON(bundleState, `medzk-claim-${bundleState.claimId}.json`);
+    downloadJSON(bundleState, `zkHealth-claim-${bundleState.claimId}.json`);
   };
 
   const emailBundle = () => {
     const subject = encodeURIComponent(
-      `MedZK Insurance Claim — ${bundleState.claimId}`,
+      `zkHealth Insurance Claim — ${bundleState.claimId}`,
     );
     const body = encodeURIComponent(
       `Dear ${

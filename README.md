@@ -1,4 +1,4 @@
-# MedZK — Privacy-First Medical Insurance Claims
+# zkHealth — Privacy-First Medical Insurance Claims
 
 > An authorized medical lab can issue a privacy-preserving claim bundle that proves a patient qualifies for an insurance claim without revealing the patient’s raw medical data.
 
@@ -13,7 +13,7 @@ Healthcare claims are still built on over-disclosure.
 
 ## The Solution
 
-MedZK lets an authorized lab generate a claim bundle containing:
+zkHealth lets an authorized lab generate a claim bundle containing:
 
 - a zero-knowledge medical proof
 - public threshold conditions
@@ -42,7 +42,7 @@ The insurer never learns:
 
 ## Why This Matters
 
-MedZK changes the claim model from:
+zkHealth changes the claim model from:
 
 **“Show me all your medical data”**
 
@@ -72,7 +72,7 @@ This reduces data exposure, improves patient privacy, and creates a path toward 
 
 ## Chainlink Use Case
 
-MedZK uses Chainlink to make claim processing automatable.
+zkHealth uses Chainlink to make claim processing automatable.
 
 ### Chainlink Automation
 

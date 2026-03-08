@@ -219,7 +219,7 @@ export function VerifierUpload({ onLoad, error }: VerifierUploadProps) {
 
                 <div className="text-center">
                   <p className="text-sm font-semibold text-slate-700">
-                    Drop MedZK claim bundle
+                    Drop zkHealth claim bundle
                   </p>
                   <p className="mt-1 text-xs text-slate-400">
                     JSON file from the patient

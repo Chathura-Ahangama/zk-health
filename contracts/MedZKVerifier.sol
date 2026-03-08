@@ -8,7 +8,7 @@ interface IVerifier {
     returns (bool);
 }
 
-contract MockMedZKVerifier is IVerifier {
+contract MockzkHealthVerifier is IVerifier {
   function verify(bytes calldata proof, bytes32[] calldata publicInputs)
     external
     pure

@@ -81,8 +81,8 @@ type ClaimListener = (update: ClaimStatusUpdate) => void;
 
 /* ── Constants ────────────────────────────────────────────── */
 
-const CHANNEL_NAME = "medzk-claim-sync";
-const STORAGE_PREFIX = "medzk_claim_";
+const CHANNEL_NAME = "zkHealth-claim-sync";
+const STORAGE_PREFIX = "zkHealth_claim_";
 
 /* ── BroadcastChannel singleton ───────────────────────────── */
 
@@ -179,7 +179,7 @@ export function publishStatusUpdate(update: ClaimStatusUpdate): void {
   // 3. Also fire storage event for fallback listeners
   if (typeof window !== "undefined") {
     window.dispatchEvent(
-      new CustomEvent("medzk-claim-update", { detail: update }),
+      new CustomEvent("zkHealth-claim-update", { detail: update }),
     );
   }
 
@@ -231,14 +231,14 @@ export function subscribeToClaimUpdates(
 
   if (typeof window !== "undefined") {
     window.addEventListener("storage", storageHandler);
-    window.addEventListener("medzk-claim-update", customHandler);
+    window.addEventListener("zkHealth-claim-update", customHandler);
   }
 
   return () => {
     listeners.get(claimId)?.delete(callback);
     if (typeof window !== "undefined") {
       window.removeEventListener("storage", storageHandler);
-      window.removeEventListener("medzk-claim-update", customHandler);
+      window.removeEventListener("zkHealth-claim-update", customHandler);
     }
   };
 }
@@ -303,7 +303,7 @@ export function clearAllClaims(): void {
 /* ── Bundle Storage ───────────────────────────────────────── */
 /* Store full claim bundles so QR code scanning can retrieve them */
 
-const BUNDLE_PREFIX = "medzk_bundle_";
+const BUNDLE_PREFIX = "zkHealth_bundle_";
 
 /**
  * Save a claim bundle to localStorage.

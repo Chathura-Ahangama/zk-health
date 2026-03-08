@@ -80,7 +80,7 @@ export function ApprovalConfirmation({
     };
     downloadJSON(
       record,
-      `medzk-${approval.decision}-${approval.referenceNumber}.json`,
+      `zkHealth-${approval.decision}-${approval.referenceNumber}.json`,
     );
   };
 

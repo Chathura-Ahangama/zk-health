@@ -49,7 +49,7 @@ export function DashboardHeader({ state, onReset }: DashboardHeaderProps) {
         </div>
         <div>
           <h1 className="text-base sm:text-lg font-semibold tracking-tight text-slate-900 flex items-center gap-1.5">
-            MedZK
+            zkHealth
             <Lock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-indigo-400" />
           </h1>
           <p className="text-[9px] sm:text-[11px] text-slate-400 tracking-wide uppercase font-medium hidden sm:block">

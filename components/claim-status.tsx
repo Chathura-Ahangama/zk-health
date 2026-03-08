@@ -73,7 +73,7 @@ export function ClaimStatus({ bundle }: ClaimStatusProps) {
         decidedAt: latestUpdate.data.decidedAt,
         verificationMethod: "Zero-Knowledge Proof",
       },
-      `medzk-decision-${bundle.claimId}.json`,
+      `zkHealth-decision-${bundle.claimId}.json`,
     );
   };
 

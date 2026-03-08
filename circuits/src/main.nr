@@ -1,7 +1,7 @@
 use std::hash::pedersen_hash;
 
 /// ═══════════════════════════════════════════════════════════
-/// MedZK — Medical Threshold ZK Circuit
+/// zkHealth — Medical Threshold ZK Circuit
 /// ═══════════════════════════════════════════════════════════
 ///
 /// PROVES:
