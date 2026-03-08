@@ -146,7 +146,7 @@ export function useVerifier() {
       });
 
       const proofData: GeneratedProof = {
-        proof: bundle.proof.hash,
+        proof: new Uint8Array(Buffer.from(bundle.proof.hash, 'hex')),
         publicSignals: bundle.proof.publicInputs,
       };
       const cryptoValid = await engineVerifyProof(

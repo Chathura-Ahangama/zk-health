@@ -16,12 +16,7 @@
  *   - "Patient's blood sugar IS ABOVE 126 mg/dL" (diabetic range)
  *   - "Patient's cholesterol IS ABOVE 200 mg/dL" (high range)
  *   - "Patient's BP systolic IS ABOVE 140 mmHg" (hypertension)
- *
- * SETUP:
- *   1. Install: npm install @noir-lang/noir_js @noir-lang/backend_barretenberg
- *   2. Compile circuit: cd circuits && nargo compile
- *   3. Copy artifact to: public/circuits/medical_proof.json
- * ═══════════════════════════════════════════════════════════════
+ 
  */
 
 import { Noir, type InputMap } from "@noir-lang/noir_js";
