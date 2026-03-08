@@ -46,6 +46,18 @@ function toBytes32(value: string): string {
   return ethers.zeroPadValue(ethers.hexlify(ethers.toUtf8Bytes(v)), 32);
 }
 
+export function hasMetaMask(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    !!(window as any).ethereum &&
+    !!(window as any).ethereum.isMetaMask
+  );
+}
+
+export function getMetaMaskInstallUrl(): string {
+  return "https://metamask.io/download/";
+}
+
 function proofToHex(proof: string): string {
   if (proof.startsWith("0x")) return proof;
   return ethers.hexlify(ethers.toUtf8Bytes(proof));

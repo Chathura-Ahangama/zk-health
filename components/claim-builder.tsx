@@ -26,6 +26,8 @@ import {
 } from "@/lib/claim-engine";
 import type { ZKProof } from "@/hooks/use-zkp";
 import { signBundleAsLab } from "@/lib/chain";
+import { WalletRequiredNotice } from "@/components/wallet-required-notice";
+import { hasMetaMask } from "@/lib/chain";
 
 interface ClaimBuilderProps {
   proof: ZKProof;
@@ -312,13 +314,13 @@ export function ClaimBuilder({
           </div>
         </GlassCard>
       )}
-
+      <WalletRequiredNotice title="MetaMask required for lab signing" />
       <div className="flex flex-col sm:flex-row gap-3">
         <motion.button
           onClick={handleSignAsLab}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          disabled={signing}
+          disabled={signing || !hasMetaMask()}
           className={cn(
             "flex-1 flex items-center justify-center gap-2.5 px-6 py-3 rounded-xl text-xs sm:text-sm font-semibold",
             preparedBundle?.issuer
