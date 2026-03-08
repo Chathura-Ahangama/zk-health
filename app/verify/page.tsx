@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
@@ -10,23 +11,20 @@ import {
   ArrowRight,
   ArrowLeft,
   FileText,
-  Clock,
-  Fingerprint,
   CheckCircle2,
   Smartphone,
 } from "lucide-react";
+import Link from "next/link";
 import { useVerifier } from "@/hooks/use-verifier";
 import { GlassCard } from "@/components/glass-card";
 import { VerifierUpload } from "@/components/verifier-upload";
 import { VerifierResult } from "@/components/verifier-result";
 import { ApprovalConfirmation } from "@/components/approval-confirmation";
+import { OnChainClaimStatus } from "@/components/onchain-claim-status";
 import { cn, formatDateTime, truncateHash } from "@/lib/utils";
 import { publishStatusUpdate, retrieveClaimBundle } from "@/lib/claim-sync";
-import Link from "next/link";
+import { LabSignatureStatus } from "@/components/lab-signature-status";
 
-/**
- * Decode base64-encoded bundle from URL param.
- */
 function decodeBundleData(encoded: string): string | null {
   try {
     const decoded = decodeURIComponent(
@@ -35,7 +33,6 @@ function decodeBundleData(encoded: string): string | null {
         .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
         .join(""),
     );
-    // Validate it's actual JSON
     JSON.parse(decoded);
     return decoded;
   } catch {
@@ -51,18 +48,15 @@ function VerifyContent() {
     "qr" | "link" | "local" | null
   >(null);
 
-  // Auto-load claim from URL params
   useEffect(() => {
     if (autoLoaded || v.state !== "AWAITING") return;
 
     const dataParam = searchParams.get("data");
     const claimId = searchParams.get("claimId");
 
-    // Priority 1: Encoded bundle data in URL (works cross-device)
     if (dataParam) {
       const decoded = decodeBundleData(dataParam);
       if (decoded) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setAutoLoaded(true);
         setAutoLoadSource("qr");
         setTimeout(() => {
@@ -72,7 +66,6 @@ function VerifyContent() {
       }
     }
 
-    // Priority 2: ClaimId — try localStorage (same browser only)
     if (claimId) {
       const bundle = retrieveClaimBundle(claimId);
       if (bundle) {
@@ -84,8 +77,6 @@ function VerifyContent() {
         return;
       }
 
-      // ClaimId exists but no bundle found (cross-device without data param)
-      // This shouldn't happen with the new QR encoding, but handle gracefully
       setAutoLoaded(true);
       setAutoLoadSource(null);
     }
@@ -123,7 +114,6 @@ function VerifyContent() {
 
   return (
     <div className="relative min-h-screen flex flex-col">
-      {/* Header */}
       <motion.header
         className="relative z-20 flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 lg:px-10"
         initial={{ opacity: 0, y: -20 }}
@@ -174,9 +164,7 @@ function VerifyContent() {
         </div>
       </motion.header>
 
-      {/* Main */}
       <main className="flex-1 flex flex-col items-center px-3 sm:px-6 py-6 sm:py-8 lg:py-12">
-        {/* Intro — only when no URL params */}
         <AnimatePresence>
           {v.state === "AWAITING" && !hasUrlParams && (
             <motion.div
@@ -196,7 +184,6 @@ function VerifyContent() {
           )}
         </AnimatePresence>
 
-        {/* Auto-loading indicator */}
         <AnimatePresence>
           {v.state === "AWAITING" && hasUrlParams && (
             <motion.div
@@ -237,7 +224,6 @@ function VerifyContent() {
                     </p>
                   </div>
 
-                  {/* Progress dots */}
                   <div className="flex items-center gap-1.5">
                     {[0, 1, 2].map((i) => (
                       <motion.div
@@ -259,7 +245,6 @@ function VerifyContent() {
         </AnimatePresence>
 
         <AnimatePresence mode="wait">
-          {/* AWAITING — show upload only when no auto-load */}
           {v.state === "AWAITING" && !hasUrlParams && (
             <VerifierUpload
               key="upload"
@@ -268,7 +253,6 @@ function VerifyContent() {
             />
           )}
 
-          {/* PARSING */}
           {v.state === "PARSING" && (
             <motion.div
               key="parsing"
@@ -298,7 +282,6 @@ function VerifyContent() {
             </motion.div>
           )}
 
-          {/* PARSED */}
           {v.state === "PARSED" && v.bundle && (
             <ParsedView
               key="parsed"
@@ -309,7 +292,6 @@ function VerifyContent() {
             />
           )}
 
-          {/* VERIFYING */}
           {v.state === "VERIFYING" && (
             <motion.div
               key="verifying"
@@ -373,7 +355,6 @@ function VerifyContent() {
             </motion.div>
           )}
 
-          {/* VALID / INVALID */}
           {(v.state === "VALID" || v.state === "INVALID") &&
             v.bundle &&
             v.result && (
@@ -387,7 +368,6 @@ function VerifyContent() {
               />
             )}
 
-          {/* APPROVED / REJECTED */}
           {(v.state === "APPROVED" || v.state === "REJECTED") &&
             v.bundle &&
             v.approval && (
@@ -400,7 +380,6 @@ function VerifyContent() {
             )}
         </AnimatePresence>
 
-        {/* Error toast */}
         <AnimatePresence>
           {v.error && v.state !== "AWAITING" && v.state !== "PARSED" && (
             <motion.div
@@ -424,8 +403,6 @@ function VerifyContent() {
   );
 }
 
-/* ── Parsed View ──────────────────────────────────────────── */
-
 function ParsedView({
   bundle,
   onVerify,
@@ -445,7 +422,6 @@ function ParsedView({
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       className="w-full max-w-2xl mx-auto space-y-4 sm:space-y-5"
     >
-      {/* Auto-loaded badge */}
       {autoLoadSource && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -529,6 +505,9 @@ function ParsedView({
           </p>
         </div>
       </GlassCard>
+      <LabSignatureStatus bundle={bundle} />
+
+      {bundle.onChain && <OnChainClaimStatus bundle={bundle} />}
 
       {bundle.policy.notes && (
         <GlassCard padding="sm">
@@ -567,8 +546,6 @@ function ParsedView({
     </motion.div>
   );
 }
-
-/* ── Page Export ───────────────────────────────────────────── */
 
 export default function VerifyPage() {
   return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   FileText,
@@ -11,46 +11,96 @@ import {
   ShieldCheck,
   Lock,
   Info,
+  PenSquare,
+  CheckCircle2,
+  Loader2,
 } from "lucide-react";
 import { GlassCard } from "./glass-card";
 import { cn } from "@/lib/utils";
 import {
   CLAIM_TYPES,
+  buildClaimBundle,
   type ClaimType,
   type ClaimDetails,
+  type ClaimBundle,
 } from "@/lib/claim-engine";
 import type { ZKProof } from "@/hooks/use-zkp";
+import { signBundleAsLab } from "@/lib/chain";
 
 interface ClaimBuilderProps {
   proof: ZKProof;
-  onSubmit: (details: ClaimDetails) => void;
+  labName: string;
+  onSubmitBundle: (bundle: ClaimBundle) => void;
 }
 
-export function ClaimBuilder({ proof, onSubmit }: ClaimBuilderProps) {
+export function ClaimBuilder({
+  proof,
+  labName,
+  onSubmitBundle,
+}: ClaimBuilderProps) {
   const [policyNumber, setPolicyNumber] = useState("");
   const [claimType, setClaimType] = useState<ClaimType>("diabetes_diagnosis");
   const [insurerName, setInsurerName] = useState("");
   const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [preparedBundle, setPreparedBundle] = useState<ClaimBundle | null>(
+    null,
+  );
+  const [signing, setSigning] = useState(false);
+  const [signError, setSignError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPreparedBundle(null);
+    setSignError(null);
+  }, [policyNumber, claimType, insurerName, notes]);
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
-    if (!policyNumber.trim())
+    if (!policyNumber.trim()) {
       newErrors.policyNumber = "Policy number is required";
-    if (!insurerName.trim())
+    }
+    if (!insurerName.trim()) {
       newErrors.insurerName = "Insurance company name is required";
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
-    if (!validate()) return;
-    onSubmit({
+  const buildDraft = (): ClaimBundle | null => {
+    if (!validate()) return null;
+
+    const details: ClaimDetails = {
       policyNumber: policyNumber.trim(),
       claimType,
       insurerName: insurerName.trim(),
       notes: notes.trim(),
-    });
+    };
+
+    return buildClaimBundle(proof, details, labName);
+  };
+
+  const handleSignAsLab = async () => {
+    try {
+      setSignError(null);
+      const draft = buildDraft();
+      if (!draft) return;
+
+      setSigning(true);
+      const issuer = await signBundleAsLab(draft);
+      setPreparedBundle({
+        ...draft,
+        issuer,
+      });
+    } catch (err) {
+      setSignError(err instanceof Error ? err.message : "Lab signature failed");
+    } finally {
+      setSigning(false);
+    }
+  };
+
+  const handleBuildClaim = () => {
+    if (!preparedBundle) return;
+    onSubmitBundle(preparedBundle);
   };
 
   return (
@@ -61,7 +111,6 @@ export function ClaimBuilder({ proof, onSubmit }: ClaimBuilderProps) {
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       className="w-full max-w-2xl mx-auto space-y-4 sm:space-y-5"
     >
-      {/* Header */}
       <div className="text-center space-y-2">
         <motion.div
           initial={{ scale: 0 }}
@@ -75,12 +124,10 @@ export function ClaimBuilder({ proof, onSubmit }: ClaimBuilderProps) {
           Prepare Insurance Claim
         </h2>
         <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto px-4">
-          Attach your proof to a claim. Only the proof and policy details are
-          shared — your medical values stay private.
+          The lab must sign this claim before it can be built and shared.
         </p>
       </div>
 
-      {/* Privacy reminder */}
       <GlassCard padding="sm" className="bg-indigo-50/30 border-indigo-200/30">
         <div className="flex items-start gap-2.5 sm:gap-3">
           <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-indigo-100 flex-shrink-0 mt-0.5">
@@ -88,21 +135,19 @@ export function ClaimBuilder({ proof, onSubmit }: ClaimBuilderProps) {
           </div>
           <div>
             <p className="text-[10px] sm:text-xs font-semibold text-indigo-800">
-              What the insurer will see:
+              Trust model
             </p>
             <ul className="mt-1 text-[10px] sm:text-[11px] text-indigo-600 space-y-0.5">
-              <li>✓ Cryptographic proof (reveals nothing)</li>
-              <li>✓ Thresholds (e.g., &quot;Sugar &gt; 126&quot;)</li>
-              <li>✗ Actual blood sugar or cholesterol values</li>
+              <li>✓ Lab wallet signs the bundle</li>
+              <li>✓ Only registered lab wallets can pass on-chain checks</li>
+              <li>✗ Insurer never sees private medical values</li>
             </ul>
           </div>
         </div>
       </GlassCard>
 
-      {/* Form */}
       <GlassCard glow="indigo" padding="md" className="sm:p-8">
         <div className="space-y-4 sm:space-y-5">
-          {/* Policy Number */}
           <div className="space-y-1.5">
             <label className="flex items-center gap-1.5 text-[10px] sm:text-xs font-semibold text-slate-600 uppercase tracking-wider">
               <Tag className="w-3.5 h-3.5" />
@@ -115,8 +160,7 @@ export function ClaimBuilder({ proof, onSubmit }: ClaimBuilderProps) {
               placeholder="e.g., POL-2024-001234"
               className={cn(
                 "w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl text-sm font-mono",
-                "bg-white/80 border transition-colors",
-                "placeholder:text-slate-300",
+                "bg-white/80 border transition-colors placeholder:text-slate-300",
                 "focus:outline-none focus:ring-2 focus:ring-indigo-400/40 focus:border-indigo-300",
                 errors.policyNumber
                   ? "border-red-300 bg-red-50/50"
@@ -130,7 +174,6 @@ export function ClaimBuilder({ proof, onSubmit }: ClaimBuilderProps) {
             )}
           </div>
 
-          {/* Insurance Company */}
           <div className="space-y-1.5">
             <label className="flex items-center gap-1.5 text-[10px] sm:text-xs font-semibold text-slate-600 uppercase tracking-wider">
               <Building2 className="w-3.5 h-3.5" />
@@ -143,8 +186,7 @@ export function ClaimBuilder({ proof, onSubmit }: ClaimBuilderProps) {
               placeholder="e.g., Blue Cross Health Insurance"
               className={cn(
                 "w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl text-sm",
-                "bg-white/80 border transition-colors",
-                "placeholder:text-slate-300",
+                "bg-white/80 border transition-colors placeholder:text-slate-300",
                 "focus:outline-none focus:ring-2 focus:ring-indigo-400/40 focus:border-indigo-300",
                 errors.insurerName
                   ? "border-red-300 bg-red-50/50"
@@ -158,7 +200,6 @@ export function ClaimBuilder({ proof, onSubmit }: ClaimBuilderProps) {
             )}
           </div>
 
-          {/* Claim Type */}
           <div className="space-y-1.5">
             <label className="flex items-center gap-1.5 text-[10px] sm:text-xs font-semibold text-slate-600 uppercase tracking-wider">
               <ShieldCheck className="w-3.5 h-3.5" />
@@ -171,7 +212,7 @@ export function ClaimBuilder({ proof, onSubmit }: ClaimBuilderProps) {
                   onClick={() => setClaimType(key as ClaimType)}
                   whileTap={{ scale: 0.99 }}
                   className={cn(
-                    "flex items-start gap-2.5 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl text-left transition-all border",
+                    "flex items-start gap-3 px-4 py-3 rounded-xl text-left transition-all border",
                     claimType === key
                       ? "bg-indigo-50 border-indigo-300 ring-1 ring-indigo-200"
                       : "bg-white/60 border-slate-200/60 hover:border-slate-300",
@@ -192,7 +233,7 @@ export function ClaimBuilder({ proof, onSubmit }: ClaimBuilderProps) {
                   <div>
                     <p
                       className={cn(
-                        "text-xs sm:text-sm font-semibold",
+                        "text-sm font-semibold",
                         claimType === key
                           ? "text-indigo-800"
                           : "text-slate-700",
@@ -200,7 +241,7 @@ export function ClaimBuilder({ proof, onSubmit }: ClaimBuilderProps) {
                     >
                       {config.label}
                     </p>
-                    <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5">
+                    <p className="text-[11px] text-slate-400 mt-0.5">
                       {config.description}
                     </p>
                   </div>
@@ -209,7 +250,6 @@ export function ClaimBuilder({ proof, onSubmit }: ClaimBuilderProps) {
             </div>
           </div>
 
-          {/* Notes */}
           <div className="space-y-1.5">
             <label className="flex items-center gap-1.5 text-[10px] sm:text-xs font-semibold text-slate-600 uppercase tracking-wider">
               <MessageSquare className="w-3.5 h-3.5" />
@@ -229,7 +269,6 @@ export function ClaimBuilder({ proof, onSubmit }: ClaimBuilderProps) {
         </div>
       </GlassCard>
 
-      {/* Proof attached */}
       <GlassCard padding="sm" className="bg-slate-50/50">
         <div className="flex items-center gap-2.5 sm:gap-3">
           <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-50 flex-shrink-0">
@@ -244,23 +283,84 @@ export function ClaimBuilder({ proof, onSubmit }: ClaimBuilderProps) {
             </p>
           </div>
           <span className="px-2 py-0.5 rounded text-[8px] sm:text-[9px] font-bold bg-emerald-100 text-emerald-700 uppercase flex-shrink-0">
-            Attached
+            Ready
           </span>
         </div>
       </GlassCard>
 
-      {/* Submit */}
-      <motion.div className="flex justify-center pt-1 sm:pt-2">
+      {signError && (
+        <div className="px-4 py-3 rounded-lg bg-red-50 border border-red-200/60 text-red-700 text-xs sm:text-sm">
+          {signError}
+        </div>
+      )}
+
+      {preparedBundle?.issuer && (
+        <GlassCard
+          padding="sm"
+          className="bg-emerald-50/40 border-emerald-200/40"
+        >
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-emerald-800">
+                Signed by lab
+              </p>
+              <p className="text-[10px] sm:text-[11px] text-emerald-600 font-mono break-all">
+                {preparedBundle.issuer.labAddress}
+              </p>
+            </div>
+          </div>
+        </GlassCard>
+      )}
+
+      <div className="flex flex-col sm:flex-row gap-3">
         <motion.button
-          onClick={handleSubmit}
+          onClick={handleSignAsLab}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          disabled={signing}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-2.5 px-6 py-3 rounded-xl text-xs sm:text-sm font-semibold",
+            preparedBundle?.issuer
+              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+              : "bg-white border border-slate-200 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/50",
+            signing && "opacity-60 cursor-not-allowed",
+          )}
+        >
+          {signing ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Signing...
+            </>
+          ) : preparedBundle?.issuer ? (
+            <>
+              <CheckCircle2 className="w-4 h-4" />
+              Signed as Lab
+            </>
+          ) : (
+            <>
+              <PenSquare className="w-4 h-4" />
+              Sign as Lab
+            </>
+          )}
+        </motion.button>
+
+        <motion.button
+          onClick={handleBuildClaim}
           whileHover={{ scale: 1.02, y: -1 }}
           whileTap={{ scale: 0.98 }}
-          className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-8 py-3 sm:py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-xs sm:text-sm font-semibold tracking-wide shadow-lg shadow-indigo-400/25 hover:shadow-xl hover:shadow-indigo-400/35 transition-shadow"
+          disabled={!preparedBundle?.issuer}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-2.5 px-8 py-3 rounded-xl text-xs sm:text-sm font-semibold tracking-wide shadow-lg transition-all",
+            preparedBundle?.issuer
+              ? "bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-indigo-400/25 hover:shadow-xl hover:shadow-indigo-400/35"
+              : "bg-slate-200 text-slate-400 shadow-none cursor-not-allowed",
+          )}
         >
           Build Claim Bundle
           <ArrowRight className="w-4 h-4" />
         </motion.button>
-      </motion.div>
+      </div>
     </motion.div>
   );
 }

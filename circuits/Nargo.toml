@@ -1,0 +1,7 @@
+[package]
+name = "medical_proof"
+type = "bin"
+authors = ["MedZK"]
+compiler_version = ">=0.30.0"
+
+[dependencies]

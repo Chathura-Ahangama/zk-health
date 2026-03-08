@@ -65,7 +65,6 @@ export interface ClaimBundle {
   version: "1.0.0";
   claimId: string;
 
-  // Claim metadata
   policy: {
     number: string;
     claimType: ClaimType;
@@ -74,7 +73,6 @@ export interface ClaimBundle {
     notes: string;
   };
 
-  // Proof (no private data)
   proof: {
     hash: string;
     publicInputs: string[];
@@ -84,18 +82,29 @@ export interface ClaimBundle {
     provingTimeMs: number;
   };
 
-  // Public parameters
   publicParams: {
     thresholds: Record<string, number>;
     labIdentifier: string;
   };
 
-  // Timestamps
   createdAt: number;
   expiresAt: number;
-
-  // Submitter pseudonymous ID
   submitterId: string;
+
+  issuer?: {
+    labAddress: string;
+    bundleHash: string;
+    signature: string;
+    signedAt: number;
+  };
+
+  onChain?: {
+    claimId: string;
+    txHash: string;
+    contractAddress: string;
+    chainId: number;
+    submittedAt: number;
+  };
 }
 
 export type ClaimStatus =
@@ -150,7 +159,10 @@ export function buildClaimBundle(
       provingTimeMs: proof.provingTimeMs,
     },
     publicParams: {
-      thresholds: { sugar: 126, cholesterol: 200 },
+      thresholds: {
+        sugar: 126,
+        cholesterol: 200,
+      },
       labIdentifier: labName,
     },
     createdAt: now,
@@ -191,6 +203,20 @@ export function validateBundle(bundle: ClaimBundle): {
 
   if (bundle.expiresAt && bundle.expiresAt < Date.now()) {
     errors.push("Claim bundle has expired");
+  }
+
+  if (bundle.issuer) {
+    if (!bundle.issuer.labAddress) errors.push("Missing issuer lab address");
+    if (!bundle.issuer.bundleHash) errors.push("Missing issuer bundle hash");
+    if (!bundle.issuer.signature) errors.push("Missing issuer signature");
+  }
+
+  if (bundle.onChain) {
+    if (!bundle.onChain.claimId) errors.push("Missing on-chain claim ID");
+    if (!bundle.onChain.txHash) errors.push("Missing on-chain tx hash");
+    if (!bundle.onChain.contractAddress) {
+      errors.push("Missing on-chain contract address");
+    }
   }
 
   return { valid: errors.length === 0, errors };

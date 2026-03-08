@@ -1,0 +1,13 @@
+# Private inputs
+sugar = 142
+cholesterol = 185
+bp_systolic = 128
+lab_secret = "12345"
+
+# Public inputs
+threshold_sugar = 126
+threshold_cholesterol = 200
+threshold_bp = 140
+lab_pub_hash = ""
+data_hash = ""
+result = 1

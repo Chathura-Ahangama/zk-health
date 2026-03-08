@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Download,
@@ -9,18 +9,16 @@ import {
   QrCode,
   Mail,
   Send,
-  ExternalLink,
-  Shield,
   Clock,
   FileJson,
   ChevronDown,
   ChevronUp,
   Link as LinkIcon,
-  Link,
 } from "lucide-react";
 import { GlassCard } from "./glass-card";
 import { QRProof } from "./qr-proof";
-import { cn, downloadJSON, formatDate } from "@/lib/utils";
+import { OnChainPublish } from "@/components/onchain-publish";
+import { cn, downloadJSON } from "@/lib/utils";
 import {
   serializeBundle,
   getExpiryDays,
@@ -33,13 +31,8 @@ interface ProofShareProps {
   onShared: () => void;
 }
 
-/**
- * Encode bundle into a URL-safe string.
- * Uses base64 encoding of minified JSON.
- */
 function encodeBundleForURL(bundle: ClaimBundle): string {
   const minified = JSON.stringify(bundle);
-  // btoa works with ASCII — we need to handle unicode safely
   const encoded = btoa(
     encodeURIComponent(minified).replace(/%([0-9A-F]{2})/g, (_, p1) =>
       String.fromCharCode(parseInt(p1, 16)),
@@ -49,28 +42,27 @@ function encodeBundleForURL(bundle: ClaimBundle): string {
 }
 
 export function ProofShare({ bundle, onShared }: ProofShareProps) {
+  const [bundleState, setBundleState] = useState(bundle);
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [showBundle, setShowBundle] = useState(false);
   const [shared, setShared] = useState(false);
-  const [verifyUrl, setVerifyUrl] = useState("");
 
-  const serialized = serializeBundle(bundle);
-  const expiryDays = getExpiryDays(bundle);
+  const serialized = serializeBundle(bundleState);
+  const expiryDays = getExpiryDays(bundleState);
+
+  const verifyUrl = useMemo(() => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const encoded = encodeBundleForURL(bundleState);
+    return `${origin}/verify?claimId=${encodeURIComponent(
+      bundleState.claimId,
+    )}&data=${encodeURIComponent(encoded)}`;
+  }, [bundleState]);
 
   useEffect(() => {
-    // Store in localStorage (for same-browser tab sync)
-    storeClaimBundle(bundle.claimId, bundle);
-
-    // Build the cross-device URL with encoded bundle data
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const encoded = encodeBundleForURL(bundle);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setVerifyUrl(
-      `${origin}/verify?claimId=${encodeURIComponent(bundle.claimId)}&data=${encodeURIComponent(encoded)}`,
-    );
-  }, [bundle]);
+    storeClaimBundle(bundleState.claimId, bundleState);
+  }, [bundleState]);
 
   const copyBundle = async () => {
     await navigator.clipboard.writeText(serialized);
@@ -79,15 +71,23 @@ export function ProofShare({ bundle, onShared }: ProofShareProps) {
   };
 
   const downloadBundle = () => {
-    downloadJSON(bundle, `medzk-claim-${bundle.claimId}.json`);
+    downloadJSON(bundleState, `medzk-claim-${bundleState.claimId}.json`);
   };
 
   const emailBundle = () => {
     const subject = encodeURIComponent(
-      `MedZK Insurance Claim — ${bundle.claimId}`,
+      `MedZK Insurance Claim — ${bundleState.claimId}`,
     );
     const body = encodeURIComponent(
-      `Dear ${bundle.policy.insurerName},\n\nPlease find my zero-knowledge proof claim.\n\nClaim ID: ${bundle.claimId}\nPolicy: ${bundle.policy.number}\nType: ${bundle.policy.claimTypeLabel}\n\nVerify instantly by opening this link:\n${verifyUrl}\n\nOr upload the JSON bundle below at ${typeof window !== "undefined" ? window.location.origin : ""}/verify\n\n${serialized}`,
+      `Dear ${
+        bundleState.policy.insurerName
+      },\n\nPlease find my zero-knowledge proof claim.\n\nClaim ID: ${
+        bundleState.claimId
+      }\nPolicy: ${bundleState.policy.number}\nType: ${
+        bundleState.policy.claimTypeLabel
+      }\n\nVerify instantly by opening this link:\n${verifyUrl}\n\nOr upload the JSON bundle below at ${
+        typeof window !== "undefined" ? window.location.origin : ""
+      }/verify\n\n${serialized}`,
     );
     window.open(`mailto:?subject=${subject}&body=${body}`);
   };
@@ -111,7 +111,6 @@ export function ProofShare({ bundle, onShared }: ProofShareProps) {
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       className="w-full max-w-2xl mx-auto space-y-4 sm:space-y-5"
     >
-      {/* Header */}
       <div className="text-center space-y-2">
         <motion.div
           initial={{ scale: 0 }}
@@ -127,25 +126,24 @@ export function ProofShare({ bundle, onShared }: ProofShareProps) {
         <p className="text-xs sm:text-sm text-slate-500 px-4">
           Send to{" "}
           <span className="font-semibold text-slate-700">
-            {bundle.policy.insurerName}
+            {bundleState.policy.insurerName}
           </span>
         </p>
       </div>
 
-      {/* Claim summary */}
       <GlassCard padding="sm" className="sm:p-6 bg-indigo-50/20">
         <div className="grid grid-cols-2 gap-3 sm:gap-4">
           {[
-            { label: "Claim ID", value: bundle.claimId, mono: true },
-            { label: "Policy", value: bundle.policy.number, mono: true },
+            { label: "Claim ID", value: bundleState.claimId, mono: true },
+            { label: "Policy", value: bundleState.policy.number, mono: true },
             {
               label: "Type",
-              value: bundle.policy.claimTypeLabel,
+              value: bundleState.policy.claimTypeLabel,
               mono: false,
             },
             {
               label: "Lab",
-              value: bundle.publicParams.labIdentifier,
+              value: bundleState.publicParams.labIdentifier,
               mono: false,
             },
           ].map((item, idx) => (
@@ -169,6 +167,7 @@ export function ProofShare({ bundle, onShared }: ProofShareProps) {
             </motion.div>
           ))}
         </div>
+
         <div className="flex items-center gap-2 mt-3 sm:mt-4 pt-3 border-t border-slate-200/40">
           <Clock className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
           <span className="text-[10px] sm:text-xs text-slate-500">
@@ -178,7 +177,8 @@ export function ProofShare({ bundle, onShared }: ProofShareProps) {
         </div>
       </GlassCard>
 
-      {/* Share Methods */}
+      <OnChainPublish bundle={bundleState} onUpdate={setBundleState} />
+
       <div className="grid grid-cols-2 gap-2 sm:gap-3">
         {[
           {
@@ -259,7 +259,6 @@ export function ProofShare({ bundle, onShared }: ProofShareProps) {
         })}
       </div>
 
-      {/* QR Code expanded */}
       <AnimatePresence>
         {showQR && (
           <motion.div
@@ -272,7 +271,6 @@ export function ProofShare({ bundle, onShared }: ProofShareProps) {
               padding="md"
               className="sm:p-8 flex flex-col items-center gap-4"
             >
-              {/* QR encodes the full verify URL with bundle data */}
               <QRProof data={verifyUrl} size={220} />
 
               <div className="text-center space-y-2 w-full">
@@ -280,10 +278,9 @@ export function ProofShare({ bundle, onShared }: ProofShareProps) {
                   Scan from any device — works cross-device ✓
                 </p>
                 <p className="text-[10px] text-slate-400 font-mono">
-                  {bundle.claimId}
+                  {bundleState.claimId}
                 </p>
 
-                {/* Copyable link */}
                 <button
                   onClick={copyVerifyLink}
                   className={cn(
@@ -302,16 +299,15 @@ export function ProofShare({ bundle, onShared }: ProofShareProps) {
                 </button>
               </div>
 
-              {/* How it works */}
               <div className="w-full pt-3 border-t border-slate-200/40 space-y-1.5">
                 <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
                   How it works
                 </p>
                 <div className="space-y-1">
                   {[
-                    "QR contains the full claim data (no server needed)",
-                    "Insurer scans → claim auto-loads on their device",
-                    "Works on phone, tablet, or any browser",
+                    "QR contains the full claim data",
+                    "Insurer scans and the claim auto-loads",
+                    "If submitted on-chain, insurer can also read status from Sepolia",
                   ].map((text, i) => (
                     <p
                       key={i}
@@ -328,7 +324,6 @@ export function ProofShare({ bundle, onShared }: ProofShareProps) {
         )}
       </AnimatePresence>
 
-      {/* Preview Bundle */}
       <div>
         <button
           onClick={() => setShowBundle(!showBundle)}
@@ -342,6 +337,7 @@ export function ProofShare({ bundle, onShared }: ProofShareProps) {
             <ChevronDown className="w-3 h-3" />
           )}
         </button>
+
         <AnimatePresence>
           {showBundle && (
             <motion.div
@@ -358,7 +354,6 @@ export function ProofShare({ bundle, onShared }: ProofShareProps) {
         </AnimatePresence>
       </div>
 
-      {/* Mark as shared */}
       <motion.div className="flex justify-center pt-1 sm:pt-2">
         <motion.button
           onClick={markAsShared}

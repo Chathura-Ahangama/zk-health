@@ -7,8 +7,10 @@ import {
   generateProof as engineGenerateProof,
   verifyProof as engineVerifyProof,
   generateVerificationKey,
+  uint8ArrayToHex,
   type GeneratedProof,
   type WitnessInput,
+  type ClaimEligibility,
 } from "@/lib/zkp-engine";
 import {
   buildClaimBundle,
@@ -52,18 +54,30 @@ export interface ZKProof {
   provingTimeMs: number;
 }
 
-/* ── Thresholds (public inputs to the circuit) ────────────── */
+/* ── Insurance Claim Thresholds ───────────────────────────── */
 
+/**
+ * These are the thresholds that define when a patient qualifies
+ * for an insurance claim. Values ABOVE these = condition present.
+ *
+ * These become PUBLIC INPUTS to the circuit — the insurance
+ * company can see the thresholds but NOT the actual values.
+ */
 export const THRESHOLDS = {
   sugar: {
     value: 126,
-    label: "Blood Sugar > 126 mg/dL",
+    label: "Blood Sugar ≥ 126 mg/dL (Diabetic Range)",
     direction: "above" as const,
   },
   cholesterol: {
     value: 200,
-    label: "Cholesterol < 200 mg/dL",
-    direction: "below" as const,
+    label: "Cholesterol ≥ 200 mg/dL (High Range)",
+    direction: "above" as const,
+  },
+  bloodPressure: {
+    value: 140,
+    label: "BP Systolic ≥ 140 mmHg (Hypertension)",
+    direction: "above" as const,
   },
 } as const;
 
@@ -77,6 +91,7 @@ export function useZKP() {
   const [claimBundle, setClaimBundle] = useState<ClaimBundle | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
+  const [eligibility, setEligibility] = useState<ClaimEligibility | null>(null);
 
   const witnessRef = useRef<Record<string, unknown> | null>(null);
   const proofRef = useRef<GeneratedProof | null>(null);
@@ -98,11 +113,22 @@ export function useZKP() {
     }, 250);
   };
 
+  const acceptClaimBundle = useCallback((bundle: ClaimBundle) => {
+    setClaimBundle(bundle);
+    setState("CLAIM_READY");
+  }, []);
+
   /* ── Actions ──────────────────────────────────────────── */
 
+  /**
+   * Lab uploads a patient medical report.
+   * The engine scans it and checks if the patient qualifies
+   * for an insurance claim based on thresholds.
+   */
   const uploadAndScan = useCallback(async (file: File) => {
     try {
       setError(null);
+      setEligibility(null);
       setState("GENERATING_WITNESS");
       setProgress(0);
 
@@ -111,7 +137,20 @@ export function useZKP() {
       try {
         data = JSON.parse(text) as MedicalData;
       } catch {
-        throw new Error("Invalid JSON file.");
+        throw new Error(
+          "Invalid JSON file. Please upload a valid medical report.",
+        );
+      }
+
+      // Validate required fields
+      if (
+        data.sugar === undefined &&
+        data.cholesterol === undefined &&
+        !data.bloodPressure
+      ) {
+        throw new Error(
+          'Medical report must contain at least one of: "sugar", "cholesterol", or "bloodPressure".',
+        );
       }
 
       setMedicalData(data);
@@ -132,6 +171,11 @@ export function useZKP() {
       const witness = await generateWitness(witnessInput);
       witnessRef.current = witness;
 
+      // Store eligibility info for UI display
+      if (witness._eligibility) {
+        setEligibility(witness._eligibility as ClaimEligibility);
+      }
+
       clearProgress();
       setProgress(100);
       await new Promise((r) => setTimeout(r, 600));
@@ -145,6 +189,11 @@ export function useZKP() {
     }
   }, []);
 
+  /**
+   * Generate ZK proof that the patient qualifies for insurance.
+   * This is the proof hash that the patient gives to the
+   * insurance company.
+   */
   const generateProof = useCallback(async () => {
     if (!witnessRef.current || !medicalData) return;
     try {
@@ -158,15 +207,18 @@ export function useZKP() {
       proofRef.current = generated;
       const provingTimeMs = Math.round(performance.now() - t0);
 
+      // Generate the verification key (async — real Barretenberg call)
+      const vk = await generateVerificationKey();
+
       clearProgress();
       setProgress(100);
 
       const zkProof: ZKProof = {
-        proofHash: generated.proof,
+        proofHash: uint8ArrayToHex(generated.proof),
         publicInputs: generated.publicSignals,
-        verificationKey: generateVerificationKey(),
+        verificationKey: vk,
         timestamp: Date.now(),
-        circuit: "medical_threshold_v1.nr",
+        circuit: "medical_insurance_claim_v1.nr",
         constraintCount: 2048 + Math.floor(Math.random() * 512),
         provingTimeMs,
       };
@@ -183,19 +235,32 @@ export function useZKP() {
     }
   }, [medicalData]);
 
+  /**
+   * Self-verify the proof (lab verifies before giving to patient).
+   * This mimics what the insurance company will do.
+   */
   const selfVerify = useCallback(async () => {
     if (!proofRef.current || !proof) return;
     try {
       setError(null);
       startProgress(18, 90);
+
       const isValid = await engineVerifyProof(
         proofRef.current,
         proof.verificationKey,
       );
+
       clearProgress();
       setProgress(100);
-      if (isValid) setSelfVerified(true);
-      else setError("Self-verification failed.");
+
+      if (isValid) {
+        setSelfVerified(true);
+      } else {
+        setError(
+          "Proof verification failed. The proof is invalid and cannot be used for insurance claim.",
+        );
+      }
+
       await new Promise((r) => setTimeout(r, 400));
       setProgress(0);
     } catch (err) {
@@ -205,6 +270,10 @@ export function useZKP() {
     }
   }, [proof]);
 
+  /**
+   * Build the final claim bundle that the patient submits
+   * to the insurance company.
+   */
   const buildClaim = useCallback(
     (details: ClaimDetails) => {
       if (!proof || !medicalData) return;
@@ -219,10 +288,16 @@ export function useZKP() {
     [proof, medicalData],
   );
 
+  /**
+   * Mark the claim as shared with the insurance company.
+   */
   const markShared = useCallback(() => {
     setState("SHARED");
   }, []);
 
+  /**
+   * Reset everything for a new patient report.
+   */
   const reset = useCallback(() => {
     clearProgress();
     setState("IDLE");
@@ -232,6 +307,7 @@ export function useZKP() {
     setClaimBundle(null);
     setError(null);
     setProgress(0);
+    setEligibility(null);
     witnessRef.current = null;
     proofRef.current = null;
   }, []);
@@ -248,6 +324,7 @@ export function useZKP() {
     generateProof,
     selfVerify,
     buildClaim,
+    acceptClaimBundle,
     markShared,
     reset,
   };

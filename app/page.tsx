@@ -128,7 +128,11 @@ export default function Dashboard() {
                     }}
                     className="w-full mt-8 sm:mt-10 scroll-mt-6"
                   >
-                    <ClaimBuilder proof={zkp.proof} onSubmit={zkp.buildClaim} />
+                    <ClaimBuilder
+                      proof={zkp.proof}
+                      labName={zkp.medicalData?.labName ?? "Unknown Lab"}
+                      onSubmitBundle={zkp.acceptClaimBundle}
+                    />
                   </motion.div>
                 )}
               </AnimatePresence>
