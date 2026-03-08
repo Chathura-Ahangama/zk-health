@@ -1,65 +1,160 @@
 # MedZK — Privacy-First Medical Insurance Claims
 
-> Prove you qualify for insurance without revealing your health data.
-> Zero-knowledge proofs make it mathematically impossible for the
-> insurer to learn your actual medical values.
+> An authorized medical lab can issue a privacy-preserving claim bundle that proves a patient qualifies for an insurance claim without revealing the patient’s raw medical data.
 
 ## The Problem
 
-- 400M+ medical records breached since 2009
-- Patients hand over entire medical histories for simple claims
-- Insurance claims take 30+ days due to manual verification
-- No privacy-preserving alternative exists
+Healthcare claims are still built on over-disclosure.
+
+- Patients often lose privacy because insurers request full medical reports for simple claims
+- Labs and hospitals issue sensitive diagnostic data that can be leaked, mishandled, or overshared
+- Insurance verification is slow, manual, and difficult to automate across organizations
+- There is no clean way to prove a condition exists without exposing the underlying medical values
 
 ## The Solution
 
-MedZK uses zero-knowledge proofs to let patients prove their
-medical data meets insurance policy thresholds WITHOUT revealing
-the actual values.
+MedZK lets an authorized lab generate a claim bundle containing:
 
-The insurer learns: "This patient's sugar IS above 126 mg/dL"
-The insurer NEVER sees: "This patient's sugar is exactly 142 mg/dL"
+- a zero-knowledge medical proof
+- public threshold conditions
+- insurer-facing metadata
+- a lab wallet signature proving the bundle came from an authentic issuer
+
+The insurer learns statements like:
+
+- “This patient’s blood sugar exceeds the diabetic threshold”
+- “This patient qualifies for a claim under the medical criteria”
+
+The insurer never learns:
+
+- the exact blood sugar value
+- the full lab report
+- other unrelated medical data
 
 ## How It Works
 
-1. Patient uploads lab report (JSON)
-2. ZK proof is generated locally (nothing leaves the device)
-3. Patient builds a claim and shares it with insurer
-4. Insurer verifies the proof cryptographically
-5. Claim is approved — no private data was ever revealed
+1. A medical lab uploads a patient’s report
+2. A zero-knowledge proof is generated locally
+3. The lab signs the claim bundle with its wallet
+4. The signed bundle is shared with the insurer
+5. The insurer verifies the bundle without seeing private medical values
+6. Optionally, the bundle can be submitted on-chain for auditable processing
+
+## Why This Matters
+
+MedZK changes the claim model from:
+
+**“Show me all your medical data”**
+
+to:
+
+**“Prove you qualify, without revealing the data itself.”**
+
+This reduces data exposure, improves patient privacy, and creates a path toward faster and more automatable insurance claim processing.
+
+## Current Demo Flow
+
+### Lab / Issuer Side
+
+- Upload medical report JSON
+- Generate zero-knowledge proof locally
+- Review extracted values in privacy-preserving UI
+- Sign claim bundle as lab using MetaMask
+- Share bundle by JSON, QR code, or link
+- Optionally submit the signed bundle on-chain on Sepolia
+
+### Insurer Side
+
+- Upload, paste, or scan the claim bundle
+- Verify the proof locally in the portal
+- Check whether the bundle is signed by a registered lab
+- Read the on-chain claim status if submitted to Sepolia
+
+## Chainlink Use Case
+
+MedZK uses Chainlink to make claim processing automatable.
+
+### Chainlink Automation
+
+When a signed claim bundle is submitted on-chain:
+
+- the claim enters the `Submitted` state
+- Chainlink Automation monitors pending claims
+- Automation triggers contract processing after the configured delay
+- the claim becomes `Approved` or `Rejected` automatically
+
+This demonstrates how medical proof issuance can move from a manual workflow to an automated trust-minimized pipeline.
 
 ## Tech Stack
 
-- Next.js 15 (App Router)
-- Tailwind CSS 4.0
+- Next.js 15 App Router
+- Tailwind CSS 4
 - Framer Motion
-- ZKP Circuit (Noir-compatible architecture)
-- BroadcastChannel API for real-time cross-tab sync
+- Lucide React
+- Noir-compatible ZK architecture
+- Sepolia testnet
+- Solidity smart contracts
+- Chainlink Automation
+- MetaMask wallet signatures
+
+## Current Implementation Notes
+
+This version focuses on the full product flow and issuer trust model.
+
+Implemented now:
+
+- local proof generation flow
+- lab wallet signature
+- registered lab checking on-chain
+- optional on-chain claim submission
+- Chainlink Automation processing
+- insurer-side signature validation
+
+Current limitation:
+
+- the on-chain ZK verifier is mocked for demo speed
+- the next upgrade is replacing it with the real Noir-generated verifier contract
 
 ## Try It
 
-1. Open Tab 1: [your-vercel-url.vercel.app](/)
-2. Upload the sample medical report (download button provided)
-3. Generate proof → Build claim → Share
-4. Open Tab 2: [your-vercel-url.vercel.app/verify](/verify)
-5. Upload the downloaded claim bundle
-6. Verify → Approve → Watch Tab 1 update in real time
+### Tab 1 — Lab / Issuer Portal
+
+1. Open the main app
+2. Upload the sample medical report
+3. Generate proof
+4. Prepare claim
+5. Sign as lab with MetaMask
+6. Build claim bundle
+7. Optionally submit on-chain
+8. Share by QR, JSON, or link
+
+### Tab 2 — Insurer Portal
+
+1. Open `/verify`
+2. Upload, paste, or scan the bundle
+3. Check signature status
+4. Verify proof
+5. If submitted on-chain, refresh the on-chain status card to view the Sepolia status
 
 ## Architecture
 
-Patient Device Insurer Portal
-───────────── ──────────────
-Lab Report (private)
-│
-ZK Circuit
-│
-Proof (opaque) ────► Verify Proof
-│ │
-Claim Bundle ────► Approve/Reject
-│ │
-Status Updated ◄──── Decision Synced
-
-## Team
-
-Chathura Ahangama,A Engineer
-Li Dantong,A doctor
+```text
+Medical Lab / Issuer
+        │
+        │ Upload medical report
+        ▼
+ Local ZK Proof Generation
+        │
+        │ Sign bundle with lab wallet
+        ▼
+ Signed Claim Bundle
+        ├──────────────► Insurer Portal
+        │                - verify proof
+        │                - verify signature
+        │                - check lab authenticity
+        │
+        └──────────────► Sepolia
+                         - submit claim
+                         - Chainlink Automation processes it
+                         - status becomes approved/rejected
+```
